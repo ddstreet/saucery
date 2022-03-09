@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import argparse
 import json
 import os
 import re
@@ -19,9 +18,6 @@ try:
     from sftools import SF
 except ImportError:
     raise RuntimeError('Please install python3-sftools from https://launchpad.net/~ubuntu-support-team/+archive/ubuntu/sftools')
-
-
-DEFAULT_SAUCERY_DIR = '/storage/saucery'
 
 
 class Saucery(object):
@@ -348,47 +344,3 @@ class SOS(object):
             'hostname': self.hostname,
             'machineid': self.machineid,
         }
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path', default=DEFAULT_SAUCERY_DIR,
-                        help='Location of Saucery')
-    action = parser.add_mutually_exclusive_group(required=True)
-    action.add_argument('-l', '--list', action='store_true',
-                        help='List existing sosreports')
-    action.add_argument('-L', '--list-new', action='store_true',
-                        help='List new sosreports')
-    action.add_argument('-n', '--new',
-                        help='Process new sosreport')
-    action.add_argument('--all-new', action='store_true',
-                        help='Process all new sosreports')
-    action.add_argument('-r', '--reprocess',
-                        help='Reprocess existing sosreport (without re-extracting)')
-    action.add_argument('--reextract',
-                        help='Reextract existing sosreport (without re-processing)')
-    action.add_argument('-J', '--json', action='store_true',
-                        help='(Re)create sauceryreport.json')
-    opts = parser.parse_args()
-
-    saucery = Saucery(opts.path)
-    if opts.all_new:
-        saucery.process_all_new()
-    elif opts.new:
-        saucery.process_new(opts.new)
-    elif opts.reprocess:
-        saucery.process_sos(opts.reprocess)
-    elif opts.reextract:
-        saucery.extract_sos(opts.reextract)
-    elif opts.json:
-        saucery.create_json()
-    elif opts.list or opts.list_new:
-        sosreports = saucery.sosreports if opts.list else saucery.new_sosreports
-        if not sosreports:
-            print('No sosreports found')
-        else:
-            for s in sosreports:
-                print(s)
-
-
-if __name__ == "__main__":
-    main()
