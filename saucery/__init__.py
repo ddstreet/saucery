@@ -30,6 +30,9 @@ class SauceryBase(ABC):
         pass
 
     def __init__(self, configfile=None, *, dry_run=False, **kwargs):
+        if isinstance(configfile, SauceryBase):
+            self.__init__(configfile._configfile, dry_run=configfile.dry_run, **kwargs)
+            return
         super().__init__()
         self._configfile = configfile
         self.dry_run = dry_run

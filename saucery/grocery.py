@@ -20,7 +20,6 @@ from . import SauceryBase
 
 class Grocery(SauceryBase):
     DEFAULTS = {
-        'grocer': 'CustomerCaseGrocer',
         'shelflife': '30 days',
         'deliveries': 'uploads',
         'discounts': 'triage',
@@ -38,8 +37,18 @@ class Grocery(SauceryBase):
         self._username = username
 
     @cached_property
+    def manager(self):
+        return Manager(self)
+
+    @cached_property
     def grocer(self):
-        return Grocer.create(self.config['grocer'], self)
+        grocername = self.config.get('grocer')
+        if not grocername:
+            raise ValueError('No config found for Grocer')
+        grocercls = Grocer.GROCERS.get(grocername)
+        if not grocercls:
+            raise ValueError(f'No Grocer class found for {grocername}')
+        return grocercls(self)
 
     @property
     def server(self):
@@ -115,6 +124,7 @@ class Grocery(SauceryBase):
         return datetime.now() - dateparser.parse(shelflife)
 
     def shelve(self, item, shelf, replace=False):
+        shelf = self.manager.micromanage(shelf)
         dest = str(Path(shelf) / Path(item).name)
         with suppress(FileNotFoundError):
             self.sftp.stat(dest)
@@ -148,15 +158,8 @@ class Grocer(SauceryBase):
     def __init_subclass__(cls, **kwargs):
         cls.GROCERS[cls.__name__] = cls
 
-    @classmethod
-    def create(cls, name, *args, **kwargs):
-        grocercls = cls.GROCERS.get(name)
-        if not grocercls:
-            return None
-        return grocercls(*args, **kwargs)
-
     def __init__(self, grocery, **kwargs):
-        super().__init__(grocery._configfile, dry_run=grocery.dry_run, **kwargs)
+        super().__init__(grocery, **kwargs)
         self.grocery = grocery
 
     @abstractmethod
@@ -196,7 +199,7 @@ class SubprocessGrocer(Grocer):
     def timeout(self):
         return self.config.get('lookup_timeout', 30)
 
-    def lookup_cmd(self, key, formatmap={}):
+    def subprocess_cmd(self, key, formatmap={}):
         cmd = self.config.get(key)
         if not cmd:
             return None
@@ -226,26 +229,63 @@ class SubprocessGrocer(Grocer):
         return results[0]
 
 
-class CaseGrocer(SubprocessGrocer):
-    def casenumber(self, item):
-        return self.lookup_cmd('lookup_case', {'item': item})
+class PythonGrocer(Grocer):
+    def python_cmd(self, key, formatmap={}):
+        cmd = self.config.get(key)
+        if not cmd:
+            return None
+        cmd = cmd.format(**formatmap)
+        cmd = eval(cmd)
+        if isinstance(cmd, list):
+            if len(cmd) == 0:
+                return None
+            if len(cmd) > 1:
+                self.LOGGER.info(f'Found multiple results for {formatmap}: {",".join(cmd)}')
+                return None
+            return cmd[0]
+        return cmd
+
+
+class AisleSectionBrandGrocer(SubprocessGrocer, PythonGrocer):
+    def run_cmd(self, key, params):
+        result = self.python_cmd(f'{key}_python', params)
+        if result is None:
+            result = self.subprocess_cmd(f'{key}_subprocess', params)
+        return result
 
     def item_shelf(self, item):
-        casenumber = self.casenumber(item)
-        if not casenumber:
+        params = {'item': item}
+        brand = self.run_cmd('brand', params)
+        if not brand:
             return None
-        return str(Path('cases') / casenumber)
+        params['brand'] = brand
+        section = self.run_cmd('section', params)
+        if not section:
+            return None
+        params['section'] = section
+        aisle = self.run_cmd('aisle', params)
+        if not aisle:
+            return None
+        return str(Path(aisle) / section / brand)
 
 
-class CustomerCaseGrocer(CaseGrocer):
-    def customername(self, casenumber):
-        return self.lookup_cmd('lookup_customer', {'casenumber': casenumber})
+class Manager(SauceryBase):
+    @classmethod
+    def CONFIG_SECTION(cls):
+        return 'manager'
 
-    def item_shelf(self, item):
-        casenumber = self.casenumber(item)
-        if not casenumber:
-            return None
-        customername = self.customername(casenumber)
-        if not customername:
-            return None
-        return str(Path('customers') / customername / casenumber)
+    @property
+    def snowflakes(self):
+        snowflakes = self.config.get('snowflakes')
+        if not snowflakes:
+            return {}
+        snowflakes = ast.literal_eval(snowflakes)
+        if not isinstance(snowflakes, dict):
+            raise ValueError(f'Invalid manager snowflakes, must be dict: {snowflakes}')
+        return snowflakes
+
+    def micromanage(self, shelf):
+        for snowflake, checkout_aisle in self.snowflakes.items():
+            if shelf.startswith(snowflake):
+                return shelf.replace(snowflake, checkout_aisle, 1)
+        return shelf

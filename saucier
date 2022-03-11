@@ -45,7 +45,11 @@ def main():
         return
 
     if opts.extract:
-        saucery.sosreport(opts.extract).extract(reextract=True)
+        sos = saucery.sosreport(opts.extract)
+        if sos:
+            sos.extract(reextract=True)
+        else:
+            logger.error(f'Sosreport {opts.extract} not found.')
         return
 
     grocery = Grocery(opts.config,
