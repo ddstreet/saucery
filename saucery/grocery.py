@@ -1,0 +1,274 @@
+#!/usr/bin/python3
+
+import ast
+import dateparser
+import logging
+import os
+import paramiko
+import subprocess
+
+from abc import ABC
+from abc import abstractmethod
+from configparser import ConfigParser
+from configparser import DuplicateSectionError
+from contextlib import suppress
+from datetime import datetime
+from functools import cached_property
+from pathlib import Path
+
+
+class Grocery(object):
+    LOGGER = logging.getLogger(__name__)
+    DEFAULT_CONFIGS = ['grocery.conf', 'grocer.conf']
+    DEFAULTS = {
+        'grocer': 'CustomerCaseGrocer',
+        'shelflife': '30 days',
+        'deliveries': 'uploads',
+        'discounts': 'triage',
+        'expired': 'trash',
+    }
+    GROCERS = {}
+
+    @classmethod
+    def configdir(cls):
+        xdg_config_home = os.getenv('XDG_CONFIG_HOME', '~/.config')
+        return Path(xdg_config_home).expanduser().resolve() / 'saucery'
+
+    def __init__(self, config=None, *, dry_run=False, server=None, username=None, log_sftp=False):
+        super().__init__()
+        self._configfiles = [Path(self.configdir()) / Path(f)
+                             for f in [config] + self.DEFAULT_CONFIGS if f]
+        self.dry_run = dry_run
+        self.log_sftp = log_sftp
+        self._server = server
+        self._username = username
+
+    @cached_property
+    def fullconfig(self):
+        config = ConfigParser(defaults=self.DEFAULTS)
+        config.read(self._configfiles)
+        return config
+
+    @cached_property
+    def config(self):
+        c = self.fullconfig
+        with suppress(DuplicateSectionError):
+            c.add_section('grocery')
+        return c['grocery']
+
+    @cached_property
+    def grocer(self):
+        return Grocer.create(self.config['grocer'], self)
+
+    @property
+    def server(self):
+        try:
+            return self._server or self.config['server']
+        except KeyError:
+            raise RuntimeError('No configuration found for remote server')
+
+    @property
+    def username(self):
+        try:
+            return self._username or self.config['username']
+        except KeyError:
+            raise RuntimeError('No configuration found for username')
+
+    @cached_property
+    def sftp(self):
+        if not self.log_sftp:
+            logging.getLogger('paramiko').setLevel(logging.CRITICAL)
+        client = paramiko.client.SSHClient()
+        client.load_system_host_keys()
+        client.connect(self.server, username=self.username)
+        return client.open_sftp()
+
+    def shelf_items(self, shelf):
+        if not shelf:
+            return []
+        try:
+            self.sftp.stat(shelf)
+        except FileNotFoundError:
+            return []
+        yield from (str(Path(shelf) / item) for item in self.sftp.listdir(path=shelf))
+
+    @property
+    def deliveries_shelf(self):
+        return self.config.get('deliveries')
+
+    @property
+    def discounts_shelf(self):
+        return self.config.get('discounts')
+
+    @property
+    def expired_shelf(self):
+        return self.config.get('expired')
+
+    @property
+    def deliveries(self):
+        yield from self.shelf_items(self.deliveries_shelf)
+
+    @property
+    def discounts(self):
+        yield from self.shelf_items(self.discounts_shelf)
+
+    @property
+    def expired(self):
+        yield from self.shelf_items(self.expired_shelf)
+
+    def discount(self, item):
+        self.shelve(item, self.discounts_shelf, replace=True)
+
+    def expire(self, item):
+        self.shelve(item, self.expired_shelf, replace=True)
+
+    def age(self, item):
+        mtime = self.sftp.stat(item).st_mtime
+        return datetime.now() - datetime.fromtimestamp(mtime)
+
+    @property
+    def shelflife(self):
+        shelflife = self.config['shelflife']
+        if not shelflife.lower().endswith(' ago'):
+            shelflife += ' ago'
+        return datetime.now() - dateparser.parse(shelflife)
+
+    def shelve(self, item, shelf, replace=False):
+        dest = str(Path(shelf) / Path(item).name)
+        with suppress(FileNotFoundError):
+            self.sftp.stat(dest)
+            if replace:
+                self.LOGGER.warning(f'REPLACING existing file {dest}')
+            else:
+                raise FileExistsError(dest)
+        try:
+            self.sftp.stat(shelf)
+        except FileNotFoundError:
+            try:
+                self.LOGGER.debug(f'mkdir: {shelf}')
+                if not self.dry_run:
+                    self.sftp.mkdir(shelf)
+            except IOError:
+                self.LOGGER.error(f'Failed to mkdir {shelf}')
+                return
+        self.LOGGER.info(f'{item} -> {dest}')
+        if not self.dry_run:
+            self.sftp.rename(item, dest)
+
+
+class Grocer(ABC):
+    LOGGER = logging.getLogger(__name__)
+    GROCERS = {}
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        cls.GROCERS[cls.__name__] = cls
+
+    @classmethod
+    def create(cls, name, *args, **kwargs):
+        grocercls = cls.GROCERS.get(name)
+        if not grocercls:
+            return None
+        return grocercls(*args, **kwargs)
+
+    def __init__(self, grocery):
+        super().__init__()
+        self.grocery = grocery
+
+    @cached_property
+    def config(self):
+        c = self.grocery.fullconfig
+        with suppress(DuplicateSectionError):
+            c.add_section('grocer')
+        return c['grocer']
+
+    @abstractmethod
+    def item_shelf(self, item):
+        pass
+
+    def stock(self):
+        for item in self.grocery.deliveries:
+            self.stock_item(item)
+
+    def stock_item(self, item):
+        shelf = self.item_shelf(Path(item).name)
+        if shelf:
+            try:
+                self.grocery.shelve(item, shelf)
+            except FileExistsError:
+                dest = Path(shelf) / Path(item).name
+                self.LOGGER.info(f'Not replacing existing file {dest}')
+        else:
+            self.grocery.discount(item)
+
+    def dispose(self):
+        for item in self.grocery.discounts:
+            age = self.grocery.age(item)
+            if age > self.grocery.shelflife:
+                self.LOGGER.info(f'Disposing of expired file {item} with age {age}')
+                self.dispose_item(item)
+            else:
+                self.LOGGER.debug(f'Leaving unexpired file {item} with age {age}')
+
+    def dispose_item(self, item):
+        self.grocery.expire(item)
+
+
+class SubprocessGrocer(Grocer):
+    @property
+    def timeout(self):
+        return self.config.get('lookup_timeout', 30)
+
+    def lookup_cmd(self, key, formatmap={}):
+        cmd = self.config.get(key)
+        if not cmd:
+            return None
+        cmd = ast.literal_eval(cmd)
+        if not isinstance(cmd, list):
+            self.LOGGER.error(f'Invalid lookup cmd (not a list): {cmd}')
+            return None
+        cmd = [c.format(**formatmap) for c in cmd]
+        try:
+            result = subprocess.run(cmd, encoding='utf-8', timeout=self.timeout,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.TimeoutExpired:
+            self.LOGGER.error(f'Timed out waiting for lookup cmd')
+            return None
+        if result.returncode != 0:
+            self.LOGGER.error(f'Error running lookup cmd: {result.stderr}')
+            return None
+        results = ast.literal_eval(result.stdout)
+        if not isinstance(results, list):
+            self.LOGGER.error(f'Invalid lookup results (not a list): {results}')
+            return None
+        if len(results) == 0:
+            return None
+        if len(results) > 1:
+            self.LOGGER.info(f'Found multiple results for {formatmap}: {",".join(results)}')
+            return None
+        return results[0]
+
+
+class CaseGrocer(SubprocessGrocer):
+    def casenumber(self, item):
+        return self.lookup_cmd('lookup_case', {'item': item})
+
+    def item_shelf(self, item):
+        casenumber = self.casenumber(item)
+        if not casenumber:
+            return None
+        return str(Path('cases') / casenumber)
+
+
+class CustomerCaseGrocer(CaseGrocer):
+    def customername(self, casenumber):
+        return self.lookup_cmd('lookup_customer', {'casenumber': casenumber})
+
+    def item_shelf(self, item):
+        casenumber = self.casenumber(item)
+        if not casenumber:
+            return None
+        customername = self.customername(casenumber)
+        if not customername:
+            return None
+        return str(Path('customers') / customername / casenumber)

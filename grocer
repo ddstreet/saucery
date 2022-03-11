@@ -1,0 +1,59 @@
+#!/usr/bin/python3
+
+import argparse
+import logging
+
+from saucery.grocery import Grocery
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', help='Alternate config file to use')
+    parser.add_argument('--username', help='Username for server')
+    parser.add_argument('--server', help='Server name')
+    loglevel = parser.add_mutually_exclusive_group()
+    loglevel.add_argument('-q', '--quiet', dest='loglevel', const=logging.WARNING,
+                          action='store_const',
+                          help='Suppress info messages')
+    loglevel.add_argument('-v', '--verbose', dest='loglevel', const=logging.DEBUG,
+                          action='store_const',
+                          help='Show debug messages')
+    loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
+    parser.add_argument('--log-sftp', action='store_true', help='Show the SFTP logs')
+    parser.add_argument('-n', '--dry-run', action='store_true', help='Dry-run, do not perform actions')
+    parser.add_argument('-l', '--list', action='store_true', help='Only list files')
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument('-s', '--stock', action='store_true',
+                        help='Stock the new sosreports/files')
+    action.add_argument('-e', '--expired', action='store_true',
+                        help='Put old unknown sosreports/files in the trash')
+    opts = parser.parse_args()
+
+    logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
+    logger = logging.getLogger()
+
+    if opts.dry_run:
+        logger.info('DRY-RUN mode')
+
+    grocery = Grocery(opts.config,
+                      dry_run=opts.dry_run,
+                      server=opts.server,
+                      username=opts.username,
+                      log_sftp=opts.log_sftp)
+
+    if opts.stock:
+        if opts.list:
+            for item in grocery.deliveries:
+                logger.info(item)
+        else:
+            grocery.grocer.stock()
+    elif opts.expired:
+        if opts.list:
+            for item in grocery.discounts:
+                logger.info(item)
+        else:
+            grocery.grocer.dispose()
+
+
+if __name__ == "__main__":
+    main()
