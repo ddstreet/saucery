@@ -7,7 +7,6 @@ import os
 import paramiko
 import subprocess
 
-from abc import ABC
 from abc import abstractmethod
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
@@ -16,10 +15,10 @@ from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 
+from . import SauceryBase
 
-class Grocery(object):
-    LOGGER = logging.getLogger(__name__)
-    DEFAULT_CONFIGS = ['grocery.conf', 'grocer.conf']
+
+class Grocery(SauceryBase):
     DEFAULTS = {
         'grocer': 'CustomerCaseGrocer',
         'shelflife': '30 days',
@@ -27,34 +26,16 @@ class Grocery(object):
         'discounts': 'triage',
         'expired': 'trash',
     }
-    GROCERS = {}
 
     @classmethod
-    def configdir(cls):
-        xdg_config_home = os.getenv('XDG_CONFIG_HOME', '~/.config')
-        return Path(xdg_config_home).expanduser().resolve() / 'saucery'
+    def CONFIG_SECTION(cls):
+        return 'grocery'
 
-    def __init__(self, config=None, *, dry_run=False, server=None, username=None, log_sftp=False):
-        super().__init__()
-        self._configfiles = [Path(self.configdir()) / Path(f)
-                             for f in [config] + self.DEFAULT_CONFIGS if f]
-        self.dry_run = dry_run
+    def __init__(self, *args, server=None, username=None, log_sftp=False, **kwargs):
+        super().__init__(*args, **kwargs)
         self.log_sftp = log_sftp
         self._server = server
         self._username = username
-
-    @cached_property
-    def fullconfig(self):
-        config = ConfigParser(defaults=self.DEFAULTS)
-        config.read(self._configfiles)
-        return config
-
-    @cached_property
-    def config(self):
-        c = self.fullconfig
-        with suppress(DuplicateSectionError):
-            c.add_section('grocery')
-        return c['grocery']
 
     @cached_property
     def grocer(self):
@@ -156,9 +137,12 @@ class Grocery(object):
             self.sftp.rename(item, dest)
 
 
-class Grocer(ABC):
-    LOGGER = logging.getLogger(__name__)
+class Grocer(SauceryBase):
     GROCERS = {}
+
+    @classmethod
+    def CONFIG_SECTION(cls):
+        return 'grocer'
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
@@ -171,16 +155,9 @@ class Grocer(ABC):
             return None
         return grocercls(*args, **kwargs)
 
-    def __init__(self, grocery):
-        super().__init__()
+    def __init__(self, grocery, **kwargs):
+        super().__init__(grocery._configfile, dry_run=grocery.dry_run, **kwargs)
         self.grocery = grocery
-
-    @cached_property
-    def config(self):
-        c = self.grocery.fullconfig
-        with suppress(DuplicateSectionError):
-            c.add_section('grocer')
-        return c['grocer']
 
     @abstractmethod
     def item_shelf(self, item):

@@ -1,0 +1,69 @@
+#!/usr/bin/python3
+
+import argparse
+import logging
+
+from saucery import Saucery
+from saucery.grocery import Grocery
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', help='Alternate config file to use')
+    parser.add_argument('--username', help='Username for server')
+    parser.add_argument('--server', help='Server name')
+    loglevel = parser.add_mutually_exclusive_group()
+    loglevel.add_argument('-q', '--quiet', dest='loglevel', const=logging.WARNING,
+                          action='store_const',
+                          help='Suppress info messages')
+    loglevel.add_argument('-v', '--verbose', dest='loglevel', const=logging.DEBUG,
+                          action='store_const',
+                          help='Show debug messages')
+    loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
+    parser.add_argument('--log-sftp', action='store_true', help='Show the SFTP logs')
+    parser.add_argument('-n', '--dry-run', action='store_true', help='Dry-run, do not perform actions')
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument('-l', '--list', action='store_true',
+                        help='List new sosreports')
+    action.add_argument('-s', '--shop', action='store_true',
+                        help='Shop for new sosreports')
+    action.add_argument('-j', '--json', action='store_true',
+                        help='Rebuild the json index')
+    action.add_argument('--extract',
+                        help='Re-extract the specified sosreport')
+    opts = parser.parse_args()
+
+    logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
+    logger = logging.getLogger()
+
+    if opts.dry_run:
+        logger.info('DRY-RUN mode')
+
+    saucery = Saucery(opts.config, dry_run=opts.dry_run)
+    if opts.json:
+        saucery.create_json()
+        return
+
+    if opts.extract:
+        saucery.sosreport(opts.extract).extract(reextract=True)
+        return
+
+    grocery = Grocery(opts.config,
+                      dry_run=opts.dry_run,
+                      server=opts.server,
+                      username=opts.username,
+                      log_sftp=opts.log_sftp)
+
+    if opts.list:
+        print('do list here')
+        return
+
+    if opts.shop:
+        print('do shop here')
+        return
+
+    raise RuntimeError('Unknown action, this should not happen.')
+
+
+if __name__ == "__main__":
+    main()
