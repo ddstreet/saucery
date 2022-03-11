@@ -5,6 +5,8 @@ setup(
     version='1.0.0',
     packages=['saucery'],
     install_requires=[
+        'paramiko',
+        'dateparser',
     ],
-    scripts=['saucier'],
+    scripts=['grocer', 'saucier'],
 )
