@@ -5,12 +5,14 @@ import dateparser
 import logging
 import os
 import paramiko
+import re
 import subprocess
 
 from abc import abstractmethod
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from contextlib import suppress
+from copy import copy
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
@@ -81,6 +83,24 @@ class Grocery(SauceryBase):
         except FileNotFoundError:
             return []
         yield from (str(Path(shelf) / item) for item in self.sftp.listdir(path=shelf))
+
+    def _listdir(self, path, match=None):
+        match = match or '.'
+        try:
+            self.sftp.stat(path)
+        except FileNotFoundError:
+            return []
+        return [str(Path(path) / f)
+                for f in self.sftp.listdir(path=path) if re.match(match, f)]
+
+    def aisles(self, match=None):
+        return self._listdir('', match)
+
+    def sections(self, aisle, match=None):
+        return self._listdir(aisle, match)
+
+    def shelves(self, section, match=None):
+        return self._listdir(section, match)
 
     @property
     def deliveries_shelf(self):
@@ -194,13 +214,59 @@ class Grocer(SauceryBase):
         self.grocery.expire(item)
 
 
-class SubprocessGrocer(Grocer):
-    @property
-    def timeout(self):
-        return self.config.get('lookup_timeout', 30)
+class LookupGrocer(Grocer):
+    def lookup(self, key, formatmap):
+        self.LOGGER.debug(f"No value for '{key}'")
+        return None
 
-    def subprocess_cmd(self, key, formatmap={}):
+class ConstGrocer(LookupGrocer):
+    '''Grocer that performs lookupins using the direct value.
+
+    The lookup key must use the suffix '_const'.
+
+    If the key is found in the config, its value is used.
+
+    If the key is not found in the config, None is returned.
+    '''
+    def lookup_const(self, key, formatmap):
+        key = f'{key}_const'
+        value = self.config.get(key)
+        self.LOGGER.debug(f"lookup_const '{key}': {value}")
+        return value
+
+    def lookup(self, key, formatmap):
+        value = self.lookup_const(key, formatmap)
+        if value is None:
+            return super().lookup(key, formatmap)
+        return value
+
+
+class SubprocessGrocer(LookupGrocer):
+    '''Grocer that performs lookups using subprocess call.
+
+    The lookup key must use the suffix '_subprocess'. The value must be a
+    python list, which will be passed directly to subprocess.
+
+    The list string will be evaluated with ast.literal_eval(), and then each
+    string in the list will be formatted using the format map, so any literal
+    { or } characters in the command must be doubled (i.e. {{ or }}).
+
+    The result returncode should be 0 if successfully looked up or if
+    no result was found. The result returncode should be nonzero if there
+    was a failure and stderr should include the text of the failure, which
+    will be logged, and None returned.
+
+    On success, the subprocess stdout should be the str result, or if there was no
+    result found, the stdout should be empty.
+    '''
+    @property
+    def subprocess_timeout(self):
+        return self.config.get('subprocess_timeout', 30)
+
+    def lookup_subprocess(self, key, formatmap):
+        key = f'{key}_subprocess'
         cmd = self.config.get(key)
+        self.LOGGER.debug(f"lookup_subprocess '{key}': {cmd}")
         if not cmd:
             return None
         cmd = ast.literal_eval(cmd)
@@ -209,64 +275,117 @@ class SubprocessGrocer(Grocer):
             return None
         cmd = [c.format(**formatmap) for c in cmd]
         try:
-            result = subprocess.run(cmd, encoding='utf-8', timeout=self.timeout,
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(cmd, encoding='utf-8',
+                                    timeout=self.subprocess_timeout,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
         except subprocess.TimeoutExpired:
             self.LOGGER.error(f'Timed out waiting for lookup cmd')
             return None
         if result.returncode != 0:
             self.LOGGER.error(f'Error running lookup cmd: {result.stderr}')
             return None
-        results = ast.literal_eval(result.stdout)
-        if not isinstance(results, list):
-            self.LOGGER.error(f'Invalid lookup results (not a list): {results}')
-            return None
-        if len(results) == 0:
-            return None
-        if len(results) > 1:
-            self.LOGGER.info(f'Found multiple results for {formatmap}: {",".join(results)}')
-            return None
-        return results[0]
+        return result.stdout
+
+    def lookup(self, key, formatmap):
+        value = self.lookup_subprocess(key, formatmap)
+        if value is None:
+            return super().lookup(key, formatmap)
+        return value
 
 
-class PythonGrocer(Grocer):
-    def python_cmd(self, key, formatmap={}):
+class PythonGrocer(LookupGrocer):
+    '''Grocer that performs lookups using python.
+
+    The lookup key must use the suffix '_python'. The value must python
+    code that will be passed directly to eval(). Copies of the running
+    globals() and locals() will be stored by this class instance and passed
+    to each call to eval.
+
+    The string will first be formatted using the format map, so any literal
+    { or } characters in the command must be doubled (i.e. {{ or }}).
+
+    On failure, the python code should raise an Exception, which will be caught
+    and the exception error logged, and None will be returned for this lookup.
+
+    On success, the return value of the call to eval() should be the str-type result.
+
+    If no error occurred, but no result was found, the return value should be ''.
+    '''
+    @cached_property
+    def globals(self):
+        return copy(globals())
+
+    @cached_property
+    def locals(self):
+        return copy(locals())
+
+    def lookup_python(self, key, formatmap):
+        key = f'{key}_python'
         cmd = self.config.get(key)
+        self.LOGGER.debug(f"lookup_python '{key}': {cmd}")
         if not cmd:
             return None
         cmd = cmd.format(**formatmap)
-        cmd = eval(cmd)
-        if isinstance(cmd, list):
-            if len(cmd) == 0:
-                return None
-            if len(cmd) > 1:
-                self.LOGGER.info(f'Found multiple results for {formatmap}: {",".join(cmd)}')
-                return None
-            return cmd[0]
-        return cmd
+        try:
+            return eval(cmd, self.globals, self.locals)
+        except Exception as e:
+            self.LOGGER.error(f'Error running lookup cmd: {e}')
+            return None
+
+    def lookup(self, key, formatmap):
+        value = self.lookup_python(key, formatmap)
+        if value is None:
+            return super().lookup(key, formatmap)
+        return value
 
 
-class AisleSectionBrandGrocer(SubprocessGrocer, PythonGrocer):
-    def run_cmd(self, key, params):
-        result = self.python_cmd(f'{key}_python', params)
-        if result is None:
-            result = self.subprocess_cmd(f'{key}_subprocess', params)
-        return result
+class AisleSectionShelfGrocer(SubprocessGrocer, PythonGrocer, ConstGrocer):
+    '''AisleSectionShelfGrocer.
+
+    Use python and/or subprocess cmds, or const values, from our config file
+    to lookup what specific shelf this item belongs on.
+
+    The lookup order defaults to most-specific first, meaning 'shelf'
+    then 'section' and then 'aisle'. This order may be adjusted with the
+    'lookup_order' config, which should be a space and/or command separated
+    list of key names. At least one of the default key names must be included.
+    Arbitrary keys may be looked up as well, for use with later lookups.
+
+    Each lookup is provided a format map, which starts with the special key
+    'item' that is set to the str value of the item name. After each lookup,
+    the lookup key and its looked-up value are placed into the format map.
+
+    If any lookup results in None, the process ends and None is returned.
+
+    After all lookups are complete, if the combined path of the values of
+    'aisle'/'section'/'shelf' results in a location other than '.',
+    it is returned; otherwise None is returned.
+    '''
+    DEFAULT_LOOKUP_ORDER = ['shelf', 'section', 'aisle']
+
+    @cached_property
+    def order(self):
+        order = [o for o in re.split(r'[ ,]', self.config.get('lookup_order')) if o]
+        if order and set(order).isdisjoint(set(self.DEFAULT_LOOKUP_ORDER)):
+            self.LOGGER.error(f'Invalid Grocer lookup_order, requires at least one of {",".join(self.DEFAULT_LOOKUP_ORDER)}, ignoring: {",".join(order)}')
+            order = None
+        return order or self.DEFAULT_LOOKUP_ORDER
 
     def item_shelf(self, item):
-        params = {'item': item}
-        brand = self.run_cmd('brand', params)
-        if not brand:
+        fmtmap = {'item': item}
+        for key in self.order:
+            location = self.lookup(key, fmtmap)
+            if location is None:
+                return None
+            fmtmap[key] = location
+        self.LOGGER.debug(f'lookup result: {fmtmap}')
+        path = str(Path(fmtmap.get('aisle', '')) /
+                   fmtmap.get('section', '') /
+                   fmtmap.get('shelf', ''))
+        if path == '.':
             return None
-        params['brand'] = brand
-        section = self.run_cmd('section', params)
-        if not section:
-            return None
-        params['section'] = section
-        aisle = self.run_cmd('aisle', params)
-        if not aisle:
-            return None
-        return str(Path(aisle) / section / brand)
+        return path
 
 
 class Manager(SauceryBase):
