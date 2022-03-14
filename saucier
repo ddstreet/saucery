@@ -72,6 +72,7 @@ def main():
                 saucier.buy(s)
             else:
                 raise RuntimeError(f'Internal error')
+    saucier.saucery.create_json()
 
 
 if __name__ == "__main__":

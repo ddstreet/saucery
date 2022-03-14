@@ -54,3 +54,4 @@ class Saucier(SauceryBase):
                     setattr(sos.meta, k, v)
                 except AttributeError:
                     self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
+        sos.extract()
