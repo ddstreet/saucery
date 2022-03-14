@@ -53,8 +53,8 @@ def main():
         return
 
     if opts.extract:
-        sos = saucier.saucery.sosreport(opts.extract)
-        if sos:
+        sos = saucier.sosreport(opts.extract)
+        if sos.exists():
             sos.extract(reextract=True)
         else:
             logger.error(f'Sosreport {opts.extract} not found.')
@@ -64,17 +64,14 @@ def main():
     if opts.max_age:
         max_age = datetime.now() - dateparser.parse(opts.max_age + ' ago')
 
-    if opts.list:
-        for s in saucier.browse_new():
-            if max_age and max_age > saucier.grocery.age(s):
+    for s in saucier.browse_grocery():
+        if not max_age or max_age > saucier.grocery.age(s):
+            if opts.list:
                 print(s)
-        return
-
-    if opts.shop:
-        print('do shop here')
-        return
-
-    raise RuntimeError('Unknown action, this should not happen.')
+            elif opts.shop:
+                saucier.buy(s)
+            else:
+                raise RuntimeError(f'Internal error')
 
 
 if __name__ == "__main__":
