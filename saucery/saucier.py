@@ -2,6 +2,7 @@
 
 from functools import cached_property
 from pathlib import Path
+from threading import Thread
 
 from . import SauceryBase
 from .grocery import Grocery
@@ -54,4 +55,4 @@ class Saucier(SauceryBase):
                     setattr(sos.meta, k, v)
                 except AttributeError:
                     self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
-        sos.extract()
+        Thread(target=sos.extract).start()
