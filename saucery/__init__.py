@@ -234,7 +234,7 @@ class SOS(SauceryBase):
         if self.dry_run:
             return
 
-        self.workdir.mkdir(parents=True, exist_ok=False)
+        self.workdir.mkdir(parents=True, exist_ok=True)
         self.workdir.chmod(0o755)
         with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
             with tarfile.open(self.sosreport) as tar:
