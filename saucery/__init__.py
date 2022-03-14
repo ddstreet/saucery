@@ -32,21 +32,26 @@ class SauceryBase(ABC):
     def CONFIG_SECTION(cls):
         pass
 
-    def __init__(self, configfile=None, **kwargs):
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        name = cls.__name__.lower()
+        attr = f'_{name}'
+        prop = cached_property(lambda self: getattr(self, attr, cls(self)))
+        prop.__set_name__(SauceryBase, name)
+        setattr(SauceryBase, name, prop)
+
+    def __init__(self, configfile_or_instance=None, **kwargs):
         super().__init__()
-        if isinstance(configfile, SauceryBase):
-            kwargs = ChainMap(kwargs, configfile.kwargs)
-            configfile = configfile._configfile
-        self._configfile = configfile
+        if isinstance(configfile_or_instance, SauceryBase):
+            setattr(self, f'_{configfile_or_instance.__class__.__name__}', configfile_or_instance)
+            kwargs = ChainMap(kwargs, configfile_or_instance.kwargs)
+            configfile_or_instance = configfile_or_instance._configfile
+        self._configfile = configfile_or_instance
         self.kwargs = kwargs
 
     @property
     def dry_run(self):
         return self.kwargs.get('dry_run', False)
-
-    @cached_property
-    def saucery(self):
-        return Saucery(self)
 
     @cached_property
     def config(self):
@@ -104,7 +109,7 @@ class Saucery(SauceryBase):
         if not str(src.resolve()).startswith(str(self.sos.resolve())):
             raise ValueError(f'Sosreports must be located under {self.sos}: invalid location {src}')
 
-        return SOS(self, src)
+        return SOS(self, sosreport=src)
 
     def create_json(self):
         if self.dry_run:
@@ -141,8 +146,8 @@ class SOS(SauceryBase):
         except EOFError:
             raise ValueError(f'Invalid/corrupt tarfile')
 
-    def __init__(self, saucery, sosreport, **kwargs):
-        super().__init__(saucery, **kwargs)
+    def __init__(self, *args, sosreport, **kwargs):
+        super().__init__(*args, **kwargs)
         self._sosreport = sosreport
 
         # Require sanely named sosreport

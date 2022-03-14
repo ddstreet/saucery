@@ -17,10 +17,6 @@ class Saucier(SauceryBase):
     def CONFIG_SECTION(cls):
         return 'saucier'
 
-    @cached_property
-    def grocery(self):
-        return Grocery(self)
-
     def sosreport(self, name):
         return self.saucery.sosreport(Path(name).name)
 

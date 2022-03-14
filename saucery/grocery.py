@@ -15,7 +15,6 @@ from configparser import DuplicateSectionError
 from contextlib import suppress
 from copy import copy
 from datetime import datetime
-from fnmatch import fnmatch
 from functools import cached_property
 from pathlib import Path
 
@@ -40,20 +39,6 @@ class Grocery(SauceryBase):
         self.log_sftp = log_sftp
         self._server = server
         self._username = username
-
-    @cached_property
-    def manager(self):
-        return Manager(self)
-
-    @cached_property
-    def grocer(self):
-        grocername = self.config.get('grocer')
-        if not grocername:
-            raise ValueError('No config found for Grocer')
-        grocercls = Grocer.GROCERS.get(grocername)
-        if not grocercls:
-            raise ValueError(f'No Grocer class found for {grocername}')
-        return grocercls(self)
 
     @property
     def server(self):
@@ -205,14 +190,6 @@ class Grocer(SauceryBase):
     @classmethod
     def CONFIG_SECTION(cls):
         return 'grocer'
-
-    def __init__(self, grocery=None, **kwargs):
-        super().__init__(grocery, **kwargs)
-        self._grocery = grocery if isinstance(grocery, Grocery) else None
-
-    @cached_property
-    def grocery(self):
-        return self._grocery or Grocery(self)
 
     def stock(self):
         for item in self.grocery.deliveries:
