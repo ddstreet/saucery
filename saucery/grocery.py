@@ -14,6 +14,7 @@ from configparser import DuplicateSectionError
 from contextlib import suppress
 from copy import copy
 from datetime import datetime
+from fnmatch import fnmatch
 from functools import cached_property
 from pathlib import Path
 
@@ -84,23 +85,42 @@ class Grocery(SauceryBase):
             return []
         yield from (str(Path(shelf) / item) for item in self.sftp.listdir(path=shelf))
 
-    def _listdir(self, path, match=None):
-        match = match or '.'
+    def _browse_isdir(self, stat):
+        return stat.st_size is None
+
+    def _browse_isfile(self, stat):
+        return not self._browse_isdir(stat)
+
+    def _browse(self, paths, match, path=Path('.')):
+        self.LOGGER.debug(f'Browsing {path}/{match}')
+        entries = self.sftp.listdir_attr(path=str(path))
+        if not paths:
+            for e in entries:
+                if self._browse_isfile(e) and re.match(match, e.filename):
+                    self.LOGGER.debug(f'Browsed to {path / e.filename}')
+                    yield str(path / e.filename)
+        else:
+            for e in entries:
+                if self._browse_isdir(e) and re.match(match, e.filename):
+                    yield from self._browse(paths[1:], paths[0], path / e.filename)
+
+    def browse(self, shelves):
+        '''Browse.
+
+        The 'shelves' value must be a str representing the specific path to browse.
+        It will be first split by '/', and each path before the final matched to
+        dirs on the server. The final path is matched to files in the preceding
+        dirs.
+
+        This will use python regex matching for each entry in the path.
+
+        Returns an iterator of all full paths matching the 'shelves' value, or [].
+        '''
+        paths = shelves.lstrip('/').split('/')
         try:
-            self.sftp.stat(path)
-        except FileNotFoundError:
+            yield from self._browse(paths[1:], paths[0])
+        except IndexError:
             return []
-        return [str(Path(path) / f)
-                for f in self.sftp.listdir(path=path) if re.match(match, f)]
-
-    def aisles(self, match=None):
-        return self._listdir('', match)
-
-    def sections(self, aisle, match=None):
-        return self._listdir(aisle, match)
-
-    def shelves(self, section, match=None):
-        return self._listdir(section, match)
 
     @property
     def deliveries_shelf(self):
@@ -178,8 +198,8 @@ class Grocer(SauceryBase):
     def __init_subclass__(cls, **kwargs):
         cls.GROCERS[cls.__name__] = cls
 
-    def __init__(self, grocery, **kwargs):
-        super().__init__(grocery, **kwargs)
+    def __init__(self, grocery=None, **kwargs):
+        super().__init__(grocery._configfile, **kwargs)
         self.grocery = grocery
 
     @abstractmethod

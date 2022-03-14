@@ -82,6 +82,9 @@ class SOS(object):
     def sosreport(self):
         return self._sosreport
 
+    def exists(self):
+        return self.sosreport.exists()
+
     @cached_property
     def name(self):
         n = self.sosreport.name

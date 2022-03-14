@@ -29,13 +29,21 @@ class SauceryBase(ABC):
     def CONFIG_SECTION(cls):
         pass
 
-    def __init__(self, configfile=None, *, dry_run=False, **kwargs):
-        if isinstance(configfile, SauceryBase):
-            self.__init__(configfile._configfile, dry_run=configfile.dry_run, **kwargs)
-            return
+    def __init__(self, configfile=None, **kwargs):
         super().__init__()
-        self._configfile = configfile
-        self.dry_run = dry_run
+        if isinstance(configfile, SauceryBase):
+            self.__init__(configfile._configfile, **configfile.kwargs)
+        else:
+            self._configfile = configfile
+            self.kwargs = kwargs
+
+    @property
+    def dry_run(self):
+        return self.kwargs.get('dry_run', False)
+
+    @cached_property
+    def saucery(self):
+        return Saucery(self)
 
     @cached_property
     def config(self):
@@ -59,27 +67,25 @@ class Saucery(SauceryBase):
     def CONFIG_SECTION(cls):
         return 'saucery'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @cached_property
+    def saucery(self):
+        path = Path(self.config['saucery'])
+        if not path.exists():
+            raise ValueError(f'Saucery location does not exist, please create it: {path}')
+        if not path.is_dir():
+            raise ValueError(f'Saucery location is not a dir, please fix: {path}')
 
-        if not self.saucery.exists():
-            raise ValueError(f'Saucery location does not exist, please create it: {self.saucery}')
-        if not self.saucery.is_dir():
-            raise ValueError(f'Saucery location is not a dir, please fix: {self.saucery}')
+        return path
 
-        if not self.sos.is_dir():
+    @cached_property
+    def sos(self):
+        path = self.saucery / 'sos'
+        if not path.is_dir():
             if self.dry_run:
                 self.LOGGER.error('Dry-run mode, but no saucery sos dir')
             else:
-                self.sos.mkdir()
-
-    @cached_property
-    def saucery(self):
-        return Path(self.config['saucery'])
-
-    @property
-    def sos(self):
-        return self.saucery / 'sos'
+                path.mkdir()
+        return path
 
     @property
     def sauceryreport(self):
@@ -87,8 +93,8 @@ class Saucery(SauceryBase):
 
     @property
     def sosreports(self):
-        filenames = [s.name for s in self.sos.iterdir() if s.is_file()]
-        return [path / n for n in filenames if self.SOSREPORT_REGEX.match]
+        filenames = (s.name for s in self.sos.iterdir() if s.is_file())
+        yield from (path / n for n in filenames if self.SOSREPORT_REGEX.match)
 
     def sosreport(self, filename):
         src = self.sos / filename

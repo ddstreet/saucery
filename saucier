@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 
 import argparse
+import dateparser
 import logging
 
-from saucery import Saucery
-from saucery.grocery import Grocery
+from datetime import datetime
+
+from saucery.saucier import Saucier
+
 
 
 def main():
@@ -22,11 +25,12 @@ def main():
     loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
     parser.add_argument('--log-sftp', action='store_true', help='Show the SFTP logs')
     parser.add_argument('-n', '--dry-run', action='store_true', help='Dry-run, do not perform actions')
+    parser.add_argument('--max-age', help='Ignore sosreports older than this')
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('-l', '--list', action='store_true',
                         help='List new sosreports')
     action.add_argument('-s', '--shop', action='store_true',
-                        help='Shop for new sosreports')
+                        help='Shop for (download) new sosreports')
     action.add_argument('-j', '--json', action='store_true',
                         help='Rebuild the json index')
     action.add_argument('--extract',
@@ -39,27 +43,31 @@ def main():
     if opts.dry_run:
         logger.info('DRY-RUN mode')
 
-    saucery = Saucery(opts.config, dry_run=opts.dry_run)
+    saucier = Saucier(opts.config, dry_run=opts.dry_run,
+                      server=opts.server,
+                      username=opts.username,
+                      log_sftp=opts.log_sftp)
+
     if opts.json:
-        saucery.create_json()
+        saucier.saucery.create_json()
         return
 
     if opts.extract:
-        sos = saucery.sosreport(opts.extract)
+        sos = saucier.saucery.sosreport(opts.extract)
         if sos:
             sos.extract(reextract=True)
         else:
             logger.error(f'Sosreport {opts.extract} not found.')
         return
 
-    grocery = Grocery(opts.config,
-                      dry_run=opts.dry_run,
-                      server=opts.server,
-                      username=opts.username,
-                      log_sftp=opts.log_sftp)
+    max_age = None
+    if opts.max_age:
+        max_age = datetime.now() - dateparser.parse(opts.max_age + ' ago')
 
     if opts.list:
-        print('do list here')
+        for s in saucier.browse_new():
+            if max_age and max_age > saucier.grocery.age(s):
+                print(s)
         return
 
     if opts.shop:
