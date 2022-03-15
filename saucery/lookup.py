@@ -2,11 +2,12 @@
 import logging
 import subprocess
 
+from collections import UserDict
 from copy import copy
 from functools import cached_property
 
 
-class LookupBase(object):
+class LookupBase(UserDict):
     LOGGER = logging.getLogger(__name__)
     SUBCLASSES = []
 
@@ -14,56 +15,108 @@ class LookupBase(object):
     def __init_subclass__(cls, **kwargs):
         cls.SUBCLASSES.append(cls)
 
-    def __init__(self, config, name):
-        super().__init__()
-        self.config = config
-        self.name = name
-
-    def lookup_key(self, key, formatmap):
+    def lookup_value(self, key, formatmap):
         self.LOGGER.debug(f"No value for '{key}'")
         return None
 
-    @property
-    def lookup_start_key(self):
-        return self.config.get(f'{self.name}_start_key', 'key')
+    def _log_lookup_key(self, key, fallback=None):
+        value = self.get(key, fallback)
+        if not value:
+            self.LOGGER.error(f'Missing config: {key}')
+        return value
 
-    @property
-    def lookup_order(self):
-        return self.config.get(f'{self.name}_lookup_order', '').split()
+    def lookup_order(self, name):
+        return self._log_lookup_key(f'{name}_lookup_order', '').split()
 
-    @property
-    def lookup_keys(self):
-        return self.config.get(f'{self.name}_lookup_keys', '').split()
+    def lookup_keys(self, name):
+        return self._log_lookup_key(f'{name}_lookup_keys', '').split()
 
-    def lookup(self, start_value):
-        fmtmap = {self.lookup_start_key: start_value}
-        for key in self.lookup_order:
-            value = self.lookup_key(key, fmtmap)
+    def lookup(self, name, fmtmap):
+        '''Lookup value(s) from our config file.
+
+        This performs lookups from our config file and returns the resulting
+        value(s) as a dict of key: value pairs.
+
+        The 'name' parameter is used to lookup 2 initial keys:
+          - {name}_order
+          - {name)_keys
+
+        The '{name}_order' config value is split() and each key used to lookup
+        a value through the lookup_value() method, which will call through all
+        subclasses that are part of this instance. The initial format map is
+        what is passed in the 'fmtmap' parameter, or {}. As each value is looked up,
+        it is added as a key: value pair into the format map.
+
+        The '{name}_keys' config value is split() and each key used to form
+        a final dict() that is returned from this method. The values are pulled
+        from the format map values.
+
+        If any lookup_value() returns None, lookup stops and this returns None.
+        All lookup_value() values are converted to str when added to the format map.
+
+        The intention of this class is to allow flexible configuration in our
+        config file, that can build on the results of previous operations, to
+        craft a final result that is returned to the caller in a generic way.
+
+        Returns a dict() of key: value pairs, with all keys being exactly what
+        is listed in the value of the '{name}_keys' lookup.
+        '''
+        order = self.lookup_order(name)
+        keys = self.lookup_keys(name)
+        if not all((order, keys)):
+            return None
+        fmtmap = fmtmap or {}
+        for key in order:
+            value = self.lookup_value(key, fmtmap)
             if value is None:
                 return None
             fmtmap[key] = str(value)
         self.LOGGER.debug(f'lookup result: {fmtmap}')
-        return {k: fmtmap.get(k) for k in self.lookup_keys}
+        return {k: fmtmap.get(k) for k in self.lookup_keys(name)}
 
 
-class ConstLookup(LookupBase):
-    '''Lookup const value from config.
+class PythonLookup(LookupBase):
+    '''Lookup value from python eval.
 
-    The lookup key must use the prefix 'const_'.
+    The lookup key must use the prefix 'python_'. The value must python
+    code that will be passed directly to eval(). Copies of the running
+    globals() and locals() will be stored by this class instance and passed
+    to each call to eval.
 
-    If the key is found in the config, its value is used.
+    The string will first be formatted using the format map, so any literal
+    { or } characters in the command must be doubled (i.e. {{ or }}).
 
-    If the key is not found in the config, None is returned.
+    On failure, the python code should raise an Exception, which will be caught
+    and the exception error logged, and None will be returned for this lookup.
+
+    On success, the return value of the call to eval() should be the str-type result.
+
+    If no error occurred, but no result was found, the return value should be ''.
     '''
-    def lookup_const(self, key, formatmap):
-        value = self.config.get(key)
-        self.LOGGER.debug(f"lookup_const '{key}': {value}")
-        return value
+    @cached_property
+    def _lookup_globals(self):
+        return copy(globals())
 
-    def lookup_key(self, key, formatmap):
-        value = self.lookup_const(f'const_{key}', formatmap)
+    @cached_property
+    def _lookup_locals(self):
+        return copy(locals())
+
+    def _lookup_python(self, key, formatmap):
+        cmd = self.get(key)
+        if not cmd:
+            return None
+        cmd = cmd.format(**formatmap)
+        self.LOGGER.debug(f"lookup_python '{key}': {cmd}")
+        try:
+            return eval(cmd, self._lookup_globals, self._lookup_locals)
+        except Exception as e:
+            self.LOGGER.error(f'Error running lookup cmd: {e}')
+            return None
+
+    def lookup_value(self, key, formatmap):
+        value = self._lookup_python(f'python_{key}', formatmap)
         if value is None:
-            return super().lookup_key(key, formatmap)
+            return super().lookup_value(key, formatmap)
         return value
 
 
@@ -86,22 +139,22 @@ class SubprocessLookup(LookupBase):
     result found, the stdout should be empty.
     '''
     @property
-    def subprocess_timeout(self):
-        return self.config.get('subprocesslookup_timeout', 30)
+    def _subprocess_timeout(self):
+        return self.get('subprocesslookup_timeout', 30)
 
-    def lookup_subprocess(self, key, formatmap):
-        cmd = self.config.get(key)
-        self.LOGGER.debug(f"lookup_subprocess '{key}': {cmd}")
+    def _lookup_subprocess(self, key, formatmap):
+        cmd = self.get(key)
         if not cmd:
             return None
         cmd = ast.literal_eval(cmd)
+        self.LOGGER.debug(f"lookup_subprocess '{key}': {cmd}")
         if not isinstance(cmd, list):
             self.LOGGER.error(f'Invalid lookup cmd (not a list): {cmd}')
             return None
         cmd = [c.format(**formatmap) for c in cmd]
         try:
             result = subprocess.run(cmd, encoding='utf-8',
-                                    timeout=self.subprocess_timeout,
+                                    timeout=self._subprocess_timeout,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
         except subprocess.TimeoutExpired:
@@ -112,55 +165,32 @@ class SubprocessLookup(LookupBase):
             return None
         return result.stdout
 
-    def lookup_key(self, key, formatmap):
-        value = self.lookup_subprocess(f'subprocess_{key}', formatmap)
+    def lookup_value(self, key, formatmap):
+        value = self._lookup_subprocess(f'subprocess_{key}', formatmap)
         if value is None:
-            return super().lookup_key(key, formatmap)
+            return super().lookup_value(key, formatmap)
         return value
 
 
-class PythonLookup(LookupBase):
-    '''Lookup value from python eval.
+class ConstLookup(LookupBase):
+    '''Lookup const value from config.
 
-    The lookup key must use the prefix 'python_'. The value must python
-    code that will be passed directly to eval(). Copies of the running
-    globals() and locals() will be stored by this class instance and passed
-    to each call to eval.
+    The lookup key must use the prefix 'const_'.
 
-    The string will first be formatted using the format map, so any literal
-    { or } characters in the command must be doubled (i.e. {{ or }}).
+    If the key is found in the config, its value is used.
 
-    On failure, the python code should raise an Exception, which will be caught
-    and the exception error logged, and None will be returned for this lookup.
-
-    On success, the return value of the call to eval() should be the str-type result.
-
-    If no error occurred, but no result was found, the return value should be ''.
+    If the key is not found in the config, None is returned.
     '''
-    @cached_property
-    def globals(self):
-        return copy(globals())
+    def _lookup_const(self, key, formatmap):
+        value = self.get(key)
+        if value:
+            self.LOGGER.debug(f"lookup_const '{key}': {value}")
+        return value
 
-    @cached_property
-    def locals(self):
-        return copy(locals())
-
-    def lookup_python(self, key, formatmap):
-        cmd = self.config.get(key)
-        self.LOGGER.debug(f"lookup_python '{key}': {cmd}")
-        if not cmd:
-            return None
-        cmd = cmd.format(**formatmap)
-        try:
-            return eval(cmd, self.globals, self.locals)
-        except Exception as e:
-            self.LOGGER.error(f'Error running lookup cmd: {e}')
-            return None
-
-    def lookup_key(self, key, formatmap):
-        value = self.lookup_python(f'python_{key}', formatmap)
+    def lookup_value(self, key, formatmap):
+        value = self._lookup_const(f'const_{key}', formatmap)
         if value is None:
-            return super().lookup_key(key, formatmap)
+            return super().lookup_value(key, formatmap)
         return value
 
 

@@ -19,6 +19,8 @@ from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 
+from .lookup import ConfigLookup
+
 
 class SauceryBase(ABC):
     LOGGER = logging.getLogger(__name__)
@@ -62,7 +64,7 @@ class SauceryBase(ABC):
         section = self.CONFIG_SECTION()
         with suppress(DuplicateSectionError):
             config.add_section(section)
-        return config[section]
+        return ConfigLookup(config[section])
 
 
 class Saucery(SauceryBase):
@@ -104,12 +106,19 @@ class Saucery(SauceryBase):
             if s.is_file() and self.SOSREPORT_REGEX.match(s.name):
                 yield self.sosreport(s)
 
-    def sosreport(self, filename):
-        src = self.sos / filename
-        if not str(src.resolve()).startswith(str(self.sos.resolve())):
-            raise ValueError(f'Sosreports must be located under {self.sos}: invalid location {src}')
+    def _sosreport_path(self, sosreport):
+        if isinstance(sosreport, SOS):
+            return sosreport.sosreport
+        return self.sos / sosreport
 
-        return SOS(self, sosreport=src)
+    def sosreport(self, sosreport):
+        path = self._sosreport_path(sosreport)
+        if not str(path.resolve()).startswith(str(self.sos.resolve())):
+            raise ValueError(f'Sosreports must be located under {self.sos}: invalid location {path}')
+
+        if isinstance(sos, SOS):
+            return sos
+        return SOS(self, sosreport=path)
 
     def create_json(self):
         if self.dry_run:
@@ -117,8 +126,7 @@ class Saucery(SauceryBase):
 
         with tempfile.TemporaryDirectory(dir=self.sauceryreport.parent) as tmpdir:
             tmpfile = Path(tmpdir) / 'tmpfile'
-            tmpfile.write_text(json.dumps([self.sosreport(s).json for s in self.sosreports],
-                                          indent=2, sort_keys=True))
+            tmpfile.write_text(json.dumps([s.json for s in self.sosreports], indent=2, sort_keys=True))
             tmpfile.rename(self.sauceryreport)
 
 

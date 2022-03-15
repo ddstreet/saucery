@@ -61,10 +61,10 @@ def main():
         else:
             logger.error(f'Sosreport {opts.extract} not found.')
     elif opts.list:
-        for s in saucier.browse_grocery(shelflife=max_age):
+        for s in saucier.sosreports:
             print(s)
     elif opts.shop:
-        for s in saucier.browse_grocery(shelflife=max_age):
+        for s in saucier.browse(shelflife=max_age):
             saucier.buy(s)
         saucier.create_json()
 

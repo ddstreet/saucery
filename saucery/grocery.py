@@ -20,7 +20,6 @@ from functools import cached_property
 from pathlib import Path
 
 from . import SauceryBase
-from .lookup import ConfigLookup
 
 
 class Grocery(SauceryBase):
@@ -264,11 +263,19 @@ class Grocer(SauceryBase):
         if shelf:
             try:
                 self.grocery.shelve(item, shelf)
+                self.stock_actions(item, shelf)
             except FileExistsError:
                 dest = Path(shelf) / Path(item).name
                 self.LOGGER.info(f'Not replacing existing file {dest}')
         else:
-            self.shelve(item, self.grocery.discounts_shelf, replace=True)
+            self.grocery.shelve(item, self.grocery.discounts_shelf, replace=True)
+
+    def stock_actions(self, item, shelf):
+        if self.dry_run:
+            return
+        results = (self.config.lookup('stock', {'item': item, 'shelf': shelf}) or {}).values()
+        for r in results:
+            self.LOGGER.info(r)
 
     def dispose(self):
         for item in self.grocery.discounts:
@@ -279,17 +286,10 @@ class Grocer(SauceryBase):
                 self.LOGGER.debug(f'Leaving unexpired file {item} with age {age}')
 
     def dispose_item(self, item):
-        self.shelve(item, self.grocery.expired_shelf, replace=True)
-
-    @cached_property
-    def _lookup(self):
-        return ConfigLookup(self.config, 'shelf')
-
-    def shelf_lookup(self, item):
-        return self._lookup.lookup(item)
+        self.grocery.shelve(item, self.grocery.expired_shelf, replace=True)
 
     def item_shelf(self, item):
-        shelves = self.shelf_lookup(item).values()
+        shelves = self.config.lookup('shelf', {'item': item}).values()
         if not shelves:
             return None
         return Path('').joinpath(*shelves)
