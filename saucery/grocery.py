@@ -15,6 +15,7 @@ from configparser import DuplicateSectionError
 from contextlib import suppress
 from copy import copy
 from datetime import datetime
+from datetime import timedelta
 from functools import cached_property
 from pathlib import Path
 
@@ -34,9 +35,10 @@ class Grocery(SauceryBase):
     def CONFIG_SECTION(cls):
         return 'grocery'
 
-    def __init__(self, *args, server=None, username=None, log_sftp=False, **kwargs):
+    def __init__(self, *args, server=None, username=None, log_remote=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.log_sftp = log_sftp
+        if not log_remote:
+            logging.getLogger('paramiko').setLevel(logging.CRITICAL)
         self._server = server
         self._username = username
 
@@ -55,43 +57,113 @@ class Grocery(SauceryBase):
             raise RuntimeError('No configuration found for username')
 
     @cached_property
-    def sftp(self):
-        if not self.log_sftp:
-            logging.getLogger('paramiko').setLevel(logging.CRITICAL)
+    def _sftp(self):
         client = paramiko.client.SSHClient()
         client.load_system_host_keys()
         client.connect(self.server, username=self.username)
-        return client.open_sftp()
+        sftp = client.open_sftp()
+        sftp._myclient = client
+        return sftp
+
+    @property
+    def sftp(self):
+        try:
+            active = self._sftp._myclient.get_transport().is_active()
+        except AttributeError:
+            active = False
+        if not active:
+            del self._sftp
+        return self._sftp
+
+    def getfo(self, item, dest, callback=None):
+        return self.sftp.getfo(item, dest, callback=callback)
+
+    def stat(self, item):
+        if item is None:
+            return None
+        if isinstance(item, paramiko.SFTPAttributes):
+            return item
+        try:
+            return self.sftp.stat(item)
+        except FileNotFoundError:
+            self.LOGGER.error(f'Item not found: {item}')
+        return None
+
+    def _attr(self, item, attr):
+        for i in (item, self.stat(item)):
+            if hasattr(i, attr):
+                return getattr(i, attr)
+        return None
+
+    def size(self, item):
+        return self._attr(item, 'st_size')
+
+    def mtime(self, item):
+        return self._attr(item, 'st_mtime')
+
+    def exists(self, item):
+        return self.stat(item) is not None
+
+    def listdir(self, shelf, attr=False):
+        if not self.exists(shelf):
+            return []
+        listdir = self.sftp.listdir_attr if attr else self.sftp.listdir
+        return listdir(path=shelf)
+
+    def create_shelf(self, shelf):
+        self.LOGGER.debug(f'mkdir: {shelf}')
+        try:
+            if not self.dry_run:
+                if not self.exists(shelf):
+                    self.sftp.mkdir(shelf)
+        except IOError:
+            self.LOGGER.error(f'Failed to mkdir {shelf}')
+            return False
+        return True
+
+    def _shelve(self, item, shelf, dest):
+        self.LOGGER.info(f'{item} -> {dest}')
+        if self.create_shelf(shelf):
+            if not self.dry_run:
+                self.sftp.rename(item, dest)
+
+    def shelve(self, item, shelf, replace=False):
+        shelf = self.manager.micromanage(shelf)
+        dest = str(Path(shelf) / Path(item).name)
+        if self.exists(dest):
+            if replace:
+                self.LOGGER.warning(f'REPLACING existing file {dest}')
+            else:
+                raise FileExistsError(dest)
+        self._shelve(item, shelf, dest)
 
     def shelf_items(self, shelf):
-        if not shelf:
+        if not self.exists(shelf):
             return []
-        try:
-            self.sftp.stat(shelf)
-        except FileNotFoundError:
-            return []
-        yield from (str(Path(shelf) / item) for item in self.sftp.listdir(path=shelf))
+        yield from (str(Path(shelf) / item) for item in self.listdir(shelf))
 
-    def _browse_isdir(self, stat):
-        return stat.st_size is None
+    def is_shelf(self, item):
+        return self.size(item) is None
 
-    def _browse_isfile(self, stat):
-        return not self._browse_isdir(stat)
+    def is_item(self, item):
+        return not self.is_shelf(item)
 
-    def _browse(self, paths, match, path=Path('.')):
+    def _browse(self, paths, match, path=Path('.'), age=None):
         self.LOGGER.debug(f'Browsing {path}/{match}')
-        entries = self.sftp.listdir_attr(path=str(path))
-        if not paths:
-            for e in entries:
-                if self._browse_isfile(e) and re.match(match, e.filename):
-                    self.LOGGER.debug(f'Browsed to {path / e.filename}')
-                    yield str(path / e.filename)
-        else:
-            for e in entries:
-                if self._browse_isdir(e) and re.match(match, e.filename):
-                    yield from self._browse(paths[1:], paths[0], path / e.filename)
+        entries = self.listdir(str(path), attr=True)
+        for e in entries:
+            if not re.match(match, e.filename):
+                continue
+            if not self.is_fresh(e, age):
+                continue
+            newpath = path / e.filename
+            if paths and self.is_shelf(e):
+                yield from self._browse(paths[1:], paths[0], newpath, age=age)
+            elif not paths and self.is_item(e):
+                self.LOGGER.debug(f'Browsed to {newpath}')
+                yield str(newpath)
 
-    def browse(self, shelves):
+    def browse(self, shelves, shelflife=None):
         '''Browse.
 
         The 'shelves' value must be a str representing the specific path to browse.
@@ -99,13 +171,16 @@ class Grocery(SauceryBase):
         dirs on the server. The final path is matched to files in the preceding
         dirs.
 
+        If 'shelflife' is not provided, this grocery's configured shelflife is used.
+        If provided, it must be a timedelta, (tz-naive) datetime, or str.
+
         This will use python regex matching for each entry in the path.
 
         Returns an iterator of all full paths matching the 'shelves' value, or [].
         '''
         paths = shelves.lstrip('/').split('/')
         try:
-            yield from self._browse(paths[1:], paths[0])
+            yield from self._browse(paths[1:], paths[0], age=self.parse_age(shelflife))
         except IndexError:
             return []
 
@@ -119,7 +194,7 @@ class Grocery(SauceryBase):
         self.LOGGER.info(f'{item} -> {sos}')
         if not self.dry_run:
             with sos.sosreport.open('wb') as dest:
-                return self.sftp.getfo(item, dest, callback=self.progress)
+                return self.getfo(item, dest, callback=self.progress)
 
     @property
     def deliveries_shelf(self):
@@ -145,45 +220,34 @@ class Grocery(SauceryBase):
     def expired(self):
         yield from self.shelf_items(self.expired_shelf)
 
-    def discount(self, item):
-        self.shelve(item, self.discounts_shelf, replace=True)
-
-    def expire(self, item):
-        self.shelve(item, self.expired_shelf, replace=True)
+    def is_fresh(self, item, shelflife=None):
+        shelflife = shelflife or self.shelflife
+        if not shelflife:
+            return True
+        return self.age(item) < self.parse_age(shelflife)
 
     def age(self, item):
-        mtime = self.sftp.stat(item).st_mtime
-        return datetime.now() - datetime.fromtimestamp(mtime)
+        mtime = self.mtime(item)
+        if not mtime:
+            return None
+        return self.parse_age(datetime.fromtimestamp(mtime))
 
-    @property
+    def parse_age(self, age):
+        log_age = age
+        if not age:
+            return None
+        if isinstance(age, str):
+            age = dateparser.parse(f'{age} ago')
+        if isinstance(age, datetime):
+            age = datetime.now() - age
+        if isinstance(age, timedelta):
+            return age
+        self.LOGGER.warning(f'Invalid age, ignoring: {log_age}')
+        return None
+
+    @cached_property
     def shelflife(self):
-        shelflife = self.config['shelflife']
-        if not shelflife.lower().endswith(' ago'):
-            shelflife += ' ago'
-        return datetime.now() - dateparser.parse(shelflife)
-
-    def shelve(self, item, shelf, replace=False):
-        shelf = self.manager.micromanage(shelf)
-        dest = str(Path(shelf) / Path(item).name)
-        with suppress(FileNotFoundError):
-            self.sftp.stat(dest)
-            if replace:
-                self.LOGGER.warning(f'REPLACING existing file {dest}')
-            else:
-                raise FileExistsError(dest)
-        try:
-            self.sftp.stat(shelf)
-        except FileNotFoundError:
-            try:
-                self.LOGGER.debug(f'mkdir: {shelf}')
-                if not self.dry_run:
-                    self.sftp.mkdir(shelf)
-            except IOError:
-                self.LOGGER.error(f'Failed to mkdir {shelf}')
-                return
-        self.LOGGER.info(f'{item} -> {dest}')
-        if not self.dry_run:
-            self.sftp.rename(item, dest)
+        return self.parse_age(self.config['shelflife'])
 
 
 class Grocer(SauceryBase):
@@ -204,26 +268,28 @@ class Grocer(SauceryBase):
                 dest = Path(shelf) / Path(item).name
                 self.LOGGER.info(f'Not replacing existing file {dest}')
         else:
-            self.grocery.discount(item)
+            self.shelve(item, self.grocery.discounts_shelf, replace=True)
 
     def dispose(self):
         for item in self.grocery.discounts:
-            age = self.grocery.age(item)
-            if age > self.grocery.shelflife:
+            if not self.grocery.is_fresh(item):
                 self.LOGGER.info(f'Disposing of expired file {item} with age {age}')
                 self.dispose_item(item)
             else:
                 self.LOGGER.debug(f'Leaving unexpired file {item} with age {age}')
 
     def dispose_item(self, item):
-        self.grocery.expire(item)
+        self.shelve(item, self.grocery.expired_shelf, replace=True)
 
     @cached_property
-    def shelf_lookup(self):
+    def _lookup(self):
         return ConfigLookup(self.config, 'shelf')
 
+    def shelf_lookup(self, item):
+        return self._lookup.lookup(item)
+
     def item_shelf(self, item):
-        shelves = self.shelf_lookup.lookup(item).values()
+        shelves = self.shelf_lookup(item).values()
         if not shelves:
             return None
         return Path('').joinpath(*shelves)

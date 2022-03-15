@@ -9,7 +9,6 @@ from datetime import datetime
 from saucery.saucier import Saucier
 
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help='Alternate config file to use')
@@ -23,12 +22,12 @@ def main():
                           action='store_const',
                           help='Show debug messages')
     loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
-    parser.add_argument('--log-sftp', action='store_true', help='Show the SFTP logs')
+    parser.add_argument('--log-remote', action='store_true', help='Show the SFTP logs')
     parser.add_argument('-n', '--dry-run', action='store_true', help='Dry-run, do not perform actions')
     parser.add_argument('--max-age', help='Ignore sosreports older than this')
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('-l', '--list', action='store_true',
-                        help='List new sosreports')
+                        help='List sosreports')
     action.add_argument('-s', '--shop', action='store_true',
                         help='Shop for (download) new sosreports')
     action.add_argument('-j', '--json', action='store_true',
@@ -43,36 +42,31 @@ def main():
     if opts.dry_run:
         logger.info('DRY-RUN mode')
 
+    max_age = None
+    if opts.max_age:
+        max_age = datetime.now() - dateparser.parse(opts.max_age + ' ago')
+        logger.debug(f'max age: {max_age}')
+
     saucier = Saucier(opts.config, dry_run=opts.dry_run,
                       server=opts.server,
                       username=opts.username,
-                      log_sftp=opts.log_sftp)
+                      log_remote=opts.log_remote)
 
     if opts.json:
-        saucier.saucery.create_json()
-        return
-
-    if opts.extract:
+        saucier.create_json(saucier)
+    elif opts.extract:
         sos = saucier.sosreport(opts.extract)
         if sos.exists():
             sos.extract(reextract=True)
         else:
             logger.error(f'Sosreport {opts.extract} not found.')
-        return
-
-    max_age = None
-    if opts.max_age:
-        max_age = datetime.now() - dateparser.parse(opts.max_age + ' ago')
-
-    for s in saucier.browse_grocery():
-        if not max_age or max_age > saucier.grocery.age(s):
-            if opts.list:
-                print(s)
-            elif opts.shop:
-                saucier.buy(s)
-            else:
-                raise RuntimeError(f'Internal error')
-    saucier.saucery.create_json()
+    elif opts.list:
+        for s in saucier.browse_grocery(shelflife=max_age):
+            print(s)
+    elif opts.shop:
+        for s in saucier.browse_grocery(shelflife=max_age):
+            saucier.buy(s)
+        saucier.create_json()
 
 
 if __name__ == "__main__":

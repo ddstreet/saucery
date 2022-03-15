@@ -29,17 +29,20 @@ class Saucier(SauceryBase):
     def shelves(self):
         return self.config.get('shelves', '').split()
 
-    def browse_grocery(self, only_new=True):
+    def browse_grocery(self, shelflife=None):
         for shelf in self.shelves:
             self.LOGGER.debug(f'Browsing shelves: {shelf}')
-            for item in self.grocery.browse(shelf):
+            for item in self.grocery.browse(shelf, shelflife=shelflife):
                 self.LOGGER.debug(f'Browsing item: {item}')
-                if not only_new or not self.sosreport(Path(item).name).exists():
+                if not self.sosreport(Path(item).name).exists():
                     yield item
 
     def browse(self):
         for sos in self.saucery.sosreports:
             yield sos
+
+    def create_json(self):
+        return self.saucery.create_json()
 
     @cached_property
     def meta_lookup(self):
