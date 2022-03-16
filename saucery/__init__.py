@@ -68,7 +68,7 @@ class SauceryBase(ABC):
     def configsection(self, section):
         with suppress(DuplicateSectionError):
             self.configparser.add_section(section)
-        return ConfigLookup(self.configparser[section])
+        return ConfigLookup(section, self.configparser[section])
 
     @cached_property
     def config(self):

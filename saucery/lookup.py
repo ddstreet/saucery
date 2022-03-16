@@ -8,12 +8,21 @@ from functools import cached_property
 
 
 class LookupBase(UserDict):
-    LOGGER = logging.getLogger(__name__)
     SUBCLASSES = []
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
         cls.SUBCLASSES.append(cls)
+
+    def __init__(self, name, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.name = name
+        self.LOGGER = logging.getLogger(f'{__name__}.{name}')
+        self.LOGGER.addFilter(self._log_filter)
+
+    def _log_filter(self, record):
+        record.msg = f'[{self.name}]:{record.msg}'
+        return True
 
     def lookup_value(self, key, formatmap):
         self.LOGGER.debug(f"No value for '{key}'")
