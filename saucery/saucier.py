@@ -34,7 +34,7 @@ class Saucier(SauceryBase):
             self.LOGGER.debug(f'Browsing shelves: {shelf}')
             for item in self.grocery.browse(shelf, max_age=max_age):
                 self.LOGGER.debug(f'Browsing item: {item}')
-                if not self.sosreport(Path(item).name).exists():
+                if not self.sosreport(item).exists():
                     yield item
 
     @property

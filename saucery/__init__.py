@@ -252,7 +252,7 @@ class SOS(SauceryBase):
         return Path(self._sosreport).resolve()
 
     def exists(self):
-        return self.sosreport.exists()
+        return self.sosreport.is_file()
 
     @property
     def name(self):
