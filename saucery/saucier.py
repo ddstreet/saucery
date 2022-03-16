@@ -39,8 +39,7 @@ class Saucier(SauceryBase):
 
     @property
     def sosreports(self):
-        for sos in self.saucery.sosreports:
-            yield sos
+        yield from self.saucery.sosreports
 
     def create_json(self):
         return self.saucery.create_json()

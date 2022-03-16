@@ -156,12 +156,10 @@ class Grocery(SauceryBase):
         for e in entries:
             if not re.match(match, e.filename):
                 continue
-            if not self.is_fresh(e, max_age):
-                continue
             newpath = path / e.filename
             if paths and self.is_shelf(e):
                 yield from self._browse(paths[1:], paths[0], max_age, path=newpath)
-            elif not paths and self.is_item(e):
+            elif not paths and self.is_item(e) and self.is_fresh(e, max_age):
                 self.LOGGER.debug(f'Browsed to {newpath}')
                 yield str(newpath)
 
