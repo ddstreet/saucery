@@ -358,7 +358,7 @@ class SOS(SauceryBase):
     @property
     def datetime(self):
         if self.isodate:
-            return datetime(self.isodate)
+            return datetime.fromisoformat(self.isodate)
         return None
 
     @cached_property
