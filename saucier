@@ -56,7 +56,7 @@ def main():
                 try:
                     soses.append(saucier.sosreport(s))
                 except ValueError as e:
-                    self.LOGGER.error(e)
+                    logger.error(e)
             # Re-extract if individual sosreports specified
             reextract = True
         else:
