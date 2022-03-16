@@ -8,6 +8,7 @@ import paramiko
 import re
 import subprocess
 import sys
+import time
 
 from abc import abstractmethod
 from configparser import ConfigParser
@@ -121,12 +122,19 @@ class Grocery(SauceryBase):
             if not self.dry_run:
                 self.sftp.rename(item, dest)
 
-    def shelve(self, item, shelf, replace=False):
+    def shelve(self, item, shelf, existing='rename'):
         shelf = self.manager.micromanage(shelf)
         dest = str(Path(shelf) / Path(item).name)
         if self.exists(dest):
-            if replace:
+            rename = f'{dest}.RENAME.{time.time_ns()}'
+            if existing == 'replace':
                 self.LOGGER.warning(f'REPLACING existing file {dest}')
+            elif existing in ['rename', 'rename_old']:
+                self.LOGGER.info(f'Renaming existing file {dest} to {rename}')
+                self._shelve(dest, shelf, rename)
+            elif existing == 'rename_new':
+                self.LOGGER.info(f'Renaming {item} to {rename}')
+                dest = rename
             else:
                 raise FileExistsError(dest)
         self._shelve(item, shelf, dest)
@@ -256,14 +264,10 @@ class Grocer(SauceryBase):
     def stock_item(self, item):
         shelf = self.item_shelf(Path(item).name)
         if shelf:
-            try:
-                self.grocery.shelve(item, shelf)
-                self.stock_actions(item, shelf)
-            except FileExistsError:
-                dest = Path(shelf) / Path(item).name
-                self.LOGGER.info(f'Not replacing existing file {dest}')
+            self.grocery.shelve(item, shelf, existing='rename_new')
+            self.stock_actions(item, shelf)
         else:
-            self.grocery.shelve(item, self.grocery.discounts_shelf, replace=True)
+            self.grocery.shelve(item, self.grocery.discounts_shelf, existing='rename_old')
 
     def stock_actions(self, item, shelf):
         if self.dry_run:
@@ -280,7 +284,7 @@ class Grocer(SauceryBase):
                 self.LOGGER.debug(f'Leaving unexpired file {item} with age {self.grocery.age(item)}')
 
     def dispose_item(self, item):
-        self.grocery.shelve(item, self.grocery.expired_shelf, replace=True)
+        self.grocery.shelve(item, self.grocery.expired_shelf, existing='rename_new')
 
     def item_shelf(self, item):
         shelves = self.lookup('item_shelf', item=item).values()
