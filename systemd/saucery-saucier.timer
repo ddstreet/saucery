@@ -1,0 +1,5 @@
+[Unit]
+Description=Timer for Saucery Saucier grocery shopping
+
+[Timer]
+OnUnitInactiveSec=30min

@@ -184,8 +184,8 @@ class Saucery(SauceryBase):
         if not str(path.resolve()).startswith(str(self.sos.resolve())):
             raise ValueError(f'Sosreports must be located under {self.sos}: invalid location {path}')
 
-        if isinstance(sos, SOS):
-            return sos
+        if isinstance(sosreport, SOS):
+            return sosreport
         return SOS(self, sosreport=path)
 
     def create_json(self):

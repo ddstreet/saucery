@@ -26,15 +26,17 @@ def main():
                         action='count',
                         help='Dry-run, do not perform actions (use twice to stop file logging also)')
     parser.add_argument('--max-age', help='Ignore sosreports older than this')
+    parser.add_argument('-E', '--extract', action='store_true', help='Extract the sosreport')
+    parser.add_argument('-S', '--sear', action='store_true', help='Sear (run hotsos) on the sosreport')
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('-l', '--list', action='store_true',
-                        help='List sosreports')
+                        help='List (and extract and/or sear) sosreports')
     action.add_argument('-s', '--shop', action='store_true',
                         help='Shop for (download) new sosreports')
     action.add_argument('-j', '--json', action='store_true',
-                        help='Rebuild the json index')
-    action.add_argument('--extract',
-                        help='Re-extract the specified sosreport')
+                        help='Rebuild the json index (will not extract or sear anything)')
+    action.add_argument('sosreport', nargs='?',
+                        help='Re-extract and/or re-sear the specified sosreport')
     opts = parser.parse_args()
 
     logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
@@ -49,18 +51,23 @@ def main():
 
     if opts.json:
         saucier.create_json(saucier)
-    elif opts.extract:
-        sos = saucier.sosreport(opts.extract)
-        if sos.exists():
-            sos.extract(reextract=True)
+    elif opts.sosreport or opts.list:
+        if opts.list:
+            soses = saucier.sosreports
         else:
-            logger.error(f'Sosreport {opts.extract} not found.')
-    elif opts.list:
-        for s in saucier.sosreports:
-            print(s)
+            soses = [saucier.sosreport(opts.sosreport)]
+        for sos in soses:
+            if sos.exists():
+                logger.info(sos)
+                if opts.extract:
+                    sos.extract(reextract=True)
+                if opts.sear:
+                    sos.sear()
+            else:
+                logger.error(f'Sosreport {sos} not found.')
     elif opts.shop:
-        for s in saucier.browse(shelflife=opts.max_age):
-            saucier.buy(s)
+        for sos in saucier.browse(shelflife=opts.max_age):
+            saucier.buy(sos, extract=opts.extract, sear=opts.sear)
         saucier.create_json()
 
 

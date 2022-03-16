@@ -1,5 +1,5 @@
 [Unit]
-Description=Grocery shop for sosreports
+Description=Stock Grocery shelves with new deliveries
 
 [Service]
 ExecStart=grocer -s

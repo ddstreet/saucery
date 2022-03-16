@@ -1,5 +1,5 @@
 [Unit]
-Description=Grocery shop for sosreports
+Description=Timer for Saucery Grocer shelf stocking
 
 [Timer]
-OnUnitInactiveSec=300
+OnUnitInactiveSec=10min
