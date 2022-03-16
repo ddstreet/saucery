@@ -80,12 +80,10 @@ class Grocery(SauceryBase):
     def stat(self, item):
         if item is None:
             return None
-        if isinstance(item, paramiko.SFTPAttributes):
+        if not isinstance(item, str):
             return item
-        try:
+        with suppress(FileNotFoundError):
             return self.sftp.stat(item)
-        except FileNotFoundError:
-            self.LOGGER.error(f'Item not found: {item}')
         return None
 
     def _attr(self, item, attr):
