@@ -18,6 +18,7 @@ from contextlib import suppress
 from datetime import datetime
 from functools import cached_property
 from functools import lru_cache
+from logging import FileHandler
 from pathlib import Path
 
 from .lookup import ConfigLookup
@@ -51,10 +52,49 @@ class SauceryBase(ABC):
             configfile_or_instance = configfile_or_instance._configfile
         self._configfile = configfile_or_instance
         self.kwargs = kwargs
+        self.setup_logging()
 
     @property
     def dry_run(self):
         return self.kwargs.get('dry_run', False)
+
+    LOGGING_SETUP = False
+    def setup_logging(self):
+        if SauceryBase.LOGGING_SETUP:
+            return
+        SauceryBase.LOGGING_SETUP = True
+        name = self.kwargs.get('log_name')
+        if not name:
+            return
+        permanent = self._permanent_log_handler(name)
+        timestamped = self._timestamped_log_handler(name)
+        if permanent:
+            logging.getLogger().addHandler(permanent)
+        if timestamped:
+            logging.getLogger().addHandler(timestamped)
+
+    def _log_path(self, key, name):
+        path = self.configsection('logging').get(key)
+        if not path:
+            return None
+        path = Path(path)
+        if not path.exists():
+            path.mkdir()
+        return path / name
+
+    def _permanent_log_handler(self, name):
+        path = self._log_path('permanent_path', name)
+        if not path:
+            return None
+        return FileHandler(path, mode='a', encoding='utf-8', errors='backslashreplace', delay=True)
+
+    def _timestamped_log_handler(self, name):
+        path = self._log_path('timestamped_path', name)
+        if not path:
+            return None
+        suffix = path.suffix
+        path = path.with_suffix(f'.{datetime.now().isoformat()}{suffix}')
+        return FileHandler(path, mode='w', encoding='utf-8', errors='backslashreplace', delay=True)
 
     @cached_property
     def configparser(self):
@@ -101,9 +141,7 @@ class Saucery(SauceryBase):
     def sos(self):
         path = self.saucery / 'sos'
         if not path.is_dir():
-            if self.dry_run:
-                self.LOGGER.error('Dry-run mode, but no saucery sos dir')
-            else:
+            if not self.dry_run:
                 path.mkdir()
         return path
 

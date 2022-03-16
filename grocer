@@ -19,8 +19,9 @@ def main():
                           action='store_const',
                           help='Show debug messages')
     loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
-    parser.add_argument('--log-remote', action='store_true', help='Show the SFTP logs')
-    parser.add_argument('-n', '--dry-run', action='store_true', help='Dry-run, do not perform actions')
+    parser.add_argument('-n', '--dry-run',
+                        action='count',
+                        help='Dry-run, do not perform actions (use twice to stop file logging also)')
     parser.add_argument('-l', '--list', action='store_true', help='Only list files')
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('-s', '--stock', action='store_true',
@@ -32,13 +33,19 @@ def main():
     logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
     logger = logging.getLogger()
 
+    log_name = 'grocer'
     if opts.dry_run:
         logger.info('DRY-RUN mode')
+        if opts.dry_run > 1:
+            logger.info('NO file logging')
+            log_name=None
 
     grocer = Grocer(opts.config, dry_run=opts.dry_run,
                     server=opts.server,
                     username=opts.username,
-                    log_remote=opts.log_remote)
+                    log_name=log_name)
+
+    logger.debug(f'params: {vars(opts)}')
 
     if opts.stock:
         if opts.list:

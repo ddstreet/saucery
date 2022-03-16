@@ -22,8 +22,9 @@ def main():
                           action='store_const',
                           help='Show debug messages')
     loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
-    parser.add_argument('--log-remote', action='store_true', help='Show the SFTP logs')
-    parser.add_argument('-n', '--dry-run', action='store_true', help='Dry-run, do not perform actions')
+    parser.add_argument('-n', '--dry-run',
+                        action='count',
+                        help='Dry-run, do not perform actions (use twice to stop file logging also)')
     parser.add_argument('--max-age', help='Ignore sosreports older than this')
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('-l', '--list', action='store_true',
@@ -39,18 +40,19 @@ def main():
     logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
     logger = logging.getLogger()
 
+    log_name = 'saucier'
     if opts.dry_run:
         logger.info('DRY-RUN mode')
-
-    max_age = None
-    if opts.max_age:
-        max_age = datetime.now() - dateparser.parse(opts.max_age + ' ago')
-        logger.debug(f'max age: {max_age}')
+        if opts.dry_run > 1:
+            logger.info('NO file logging')
+            log_name=None
 
     saucier = Saucier(opts.config, dry_run=opts.dry_run,
                       server=opts.server,
                       username=opts.username,
-                      log_remote=opts.log_remote)
+                      log_name=log_name)
+
+    logger.debug(f'params: {vars(opts)}')
 
     if opts.json:
         saucier.create_json(saucier)
@@ -64,7 +66,7 @@ def main():
         for s in saucier.sosreports:
             print(s)
     elif opts.shop:
-        for s in saucier.browse(shelflife=max_age):
+        for s in saucier.browse(shelflife=opts.max_age):
             saucier.buy(s)
         saucier.create_json()
 

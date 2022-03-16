@@ -32,9 +32,9 @@ class Grocery(SauceryBase):
     def CONFIG_SECTION(cls):
         return 'grocery'
 
-    def __init__(self, *args, server=None, username=None, log_remote=False, **kwargs):
+    def __init__(self, *args, server=None, username=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if not log_remote:
+        if 'log_sftp' not in self.config:
             logging.getLogger('paramiko').setLevel(logging.CRITICAL)
         self._server = server
         self._username = username
@@ -44,7 +44,7 @@ class Grocery(SauceryBase):
         try:
             return self._server or self.config['server']
         except KeyError:
-            raise RuntimeError('No configuration found for remote server')
+            raise RuntimeError('No configuration found for server')
 
     @property
     def username(self):
