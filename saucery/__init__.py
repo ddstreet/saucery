@@ -80,7 +80,10 @@ class SauceryBase(ABC):
         path = Path(path)
         if not path.exists():
             path.mkdir()
-        return path / name
+        path = path / name
+        if not path.suffix:
+            path = path.with_suffix('.txt')
+        return path
 
     def _permanent_log_handler(self, name):
         path = self._log_path('permanent_path', name)
