@@ -19,6 +19,7 @@ from datetime import datetime
 from functools import cached_property
 from functools import lru_cache
 from logging import FileHandler
+from logging import Formatter
 from pathlib import Path
 
 from .lookup import ConfigLookup
@@ -82,11 +83,16 @@ class SauceryBase(ABC):
             return
         if int(self.dry_run or 0) > 1:
             return
+        formatter = self._log_fmt()
         permanent = self._permanent_log_handler(name)
         timestamped = self._timestamped_log_handler(name)
         if permanent:
+            if formatter:
+                permanent.setFormatter(formatter)
             logging.getLogger().addHandler(permanent)
         if timestamped:
+            if formatter:
+                timestamped.setFormatter(formatter)
             logging.getLogger().addHandler(timestamped)
 
     def _log_path(self, key, name):
@@ -100,6 +106,13 @@ class SauceryBase(ABC):
         if not path.suffix:
             path = path.with_suffix('.txt')
         return path
+
+    def _log_fmt(self):
+        fmt = self.configsection('logging').get('fmt')
+        if not fmt:
+            return None
+        datefmt = self.configsection('logging').get('datefmt')
+        return Formatter(fmt=fmt, datefmt=datefmt)
 
     def _permanent_log_handler(self, name):
         path = self._log_path('permanent_path', name)
