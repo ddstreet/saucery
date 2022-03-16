@@ -86,7 +86,7 @@ class SauceryBase(ABC):
         path = self._log_path('permanent_path', name)
         if not path:
             return None
-        return FileHandler(path, mode='a', encoding='utf-8', errors='backslashreplace', delay=True)
+        return FileHandler(path, mode='a', encoding='utf-8', delay=True)
 
     def _timestamped_log_handler(self, name):
         path = self._log_path('timestamped_path', name)
@@ -94,7 +94,7 @@ class SauceryBase(ABC):
             return None
         suffix = path.suffix
         path = path.with_suffix(f'.{datetime.now().isoformat()}{suffix}')
-        return FileHandler(path, mode='w', encoding='utf-8', errors='backslashreplace', delay=True)
+        return FileHandler(path, mode='w', encoding='utf-8', delay=True)
 
     @cached_property
     def configparser(self):
