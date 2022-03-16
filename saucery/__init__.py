@@ -330,21 +330,17 @@ class SOS(SauceryBase):
             # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
             topfiles[0].rename(self.filesdir)
 
-    def process(self):
-        self.LOGGER.debug(f'Processing {self.sosreport}')
-        self.gather_hotsos()
-
-    def gather_hotsos(self):
-        if self.dry_run:
+    def sear(self):
+        self.LOGGER.debug(f'HotSOS: {self.filesdir}')
+        if self.dry_run or not self.filesdir.exists():
             return
 
-        cmd = ['hotsos']
-        cmd += ['--json']
-        cmd += ['--all-logs']
+        hotsos_json = self.workdir / 'hotsos.json'
+        cmd = ['hotsos', '--json', '--all-logs']
         cmd += ['--max-parallel-tasks', str(len(os.sched_getaffinity(0)))]
         cmd += [str(self.filesdir)]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, encoding='utf-8')
-        self.hotsos = result.stdout
+        hotsos_json.write_text(result.stdout)
 
     @property
     def datetime(self):
