@@ -66,7 +66,7 @@ def main():
             else:
                 logger.error(f'Sosreport {sos} not found.')
     elif opts.shop:
-        for sos in saucier.browse(shelflife=opts.max_age):
+        for sos in saucier.browse(max_age=opts.max_age):
             saucier.buy(sos, extract=opts.extract, sear=opts.sear)
         saucier.create_json()
 

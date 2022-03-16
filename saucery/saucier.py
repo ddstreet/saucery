@@ -28,10 +28,11 @@ class Saucier(SauceryBase):
     def shelves(self):
         return self.config.get('shelves', '').split()
 
-    def browse(self, shelflife=None):
+    def browse(self, max_age=None):
+        max_age = max_age or self.max_age
         for shelf in self.shelves:
             self.LOGGER.debug(f'Browsing shelves: {shelf}')
-            for item in self.grocery.browse(shelf, shelflife=shelflife):
+            for item in self.grocery.browse(shelf, max_age=max_age):
                 self.LOGGER.debug(f'Browsing item: {item}')
                 if not self.sosreport(Path(item).name).exists():
                     yield item

@@ -150,22 +150,22 @@ class Grocery(SauceryBase):
     def is_item(self, item):
         return not self.is_shelf(item)
 
-    def _browse(self, paths, match, path=Path('.'), age=None):
+    def _browse(self, paths, match, max_age, path=Path('.')):
         self.LOGGER.debug(f'Browsing {path}/{match}')
         entries = self.listdir(str(path), attr=True)
         for e in entries:
             if not re.match(match, e.filename):
                 continue
-            if not self.is_fresh(e, age):
+            if not self.is_fresh(e, max_age):
                 continue
             newpath = path / e.filename
             if paths and self.is_shelf(e):
-                yield from self._browse(paths[1:], paths[0], newpath, age=age)
+                yield from self._browse(paths[1:], paths[0], max_age, path=newpath)
             elif not paths and self.is_item(e):
                 self.LOGGER.debug(f'Browsed to {newpath}')
                 yield str(newpath)
 
-    def browse(self, shelves, shelflife=None):
+    def browse(self, shelves, max_age=None):
         '''Browse.
 
         The 'shelves' value must be a str representing the specific path to browse.
@@ -173,7 +173,7 @@ class Grocery(SauceryBase):
         dirs on the server. The final path is matched to files in the preceding
         dirs.
 
-        If 'shelflife' is not provided, this grocery's configured shelflife is used.
+        If 'max_age' is not provided, this grocery's configured shelflife is used.
         If provided, it must be a timedelta, (tz-naive) datetime, or str.
 
         This will use python regex matching for each entry in the path.
@@ -182,7 +182,7 @@ class Grocery(SauceryBase):
         '''
         paths = shelves.lstrip('/').split('/')
         try:
-            yield from self._browse(paths[1:], paths[0], age=self.parse_age(shelflife))
+            yield from self._browse(paths[1:], paths[0], max_age=self.parse_age(max_age))
         except IndexError:
             return []
 
@@ -222,11 +222,11 @@ class Grocery(SauceryBase):
     def expired(self):
         yield from self.shelf_items(self.expired_shelf)
 
-    def is_fresh(self, item, shelflife=None):
-        shelflife = shelflife or self.shelflife
-        if not shelflife:
+    def is_fresh(self, item, max_age=None):
+        max_age = max_age or self.shelflife
+        if not max_age:
             return True
-        return self.age(item) < self.parse_age(shelflife)
+        return self.age(item) < self.parse_age(max_age)
 
     def age(self, item):
         mtime = self.mtime(item)
