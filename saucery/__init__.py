@@ -78,7 +78,7 @@ class SauceryBase(ABC):
         if SauceryBase.LOGGING_SETUP:
             return
         SauceryBase.LOGGING_SETUP = True
-        name = self.kwargs.get('log_name')
+        name = self.kwargs.get('logname')
         if not name:
             return
         if int(self.dry_run or 0) > 1:

@@ -2,4 +2,4 @@
 Description=Stock Saucery with new sosreports from Grocery
 
 [Service]
-ExecStart=saucier -ESs
+ExecStart=saucier -ESs --logname saucier

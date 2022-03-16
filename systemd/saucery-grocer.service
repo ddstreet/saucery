@@ -2,4 +2,4 @@
 Description=Stock Grocery shelves with new deliveries
 
 [Service]
-ExecStart=grocer -s
+ExecStart=grocer -s --logname grocer

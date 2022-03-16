@@ -19,6 +19,7 @@ def main():
                           action='store_const',
                           help='Show debug messages')
     loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
+    parser.add_argument('--logname', help=argparse.SUPPRESS)
     parser.add_argument('-n', '--dry-run',
                         action='count',
                         help='Dry-run, do not perform actions (use twice to stop file logging also)')
@@ -36,7 +37,7 @@ def main():
     grocer = Grocer(opts.config, dry_run=opts.dry_run,
                     server=opts.server,
                     username=opts.username,
-                    log_name='grocer')
+                    logname=opts.logname)
 
     logger.debug(f'params: {vars(opts)}')
 
