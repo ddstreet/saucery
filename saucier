@@ -51,7 +51,12 @@ def main():
             saucier.buy(sos, extract=opts.extract, sear=opts.sear)
     else:
         if opts.sosreport:
-            soses = (saucier.sosreport(s) for s in opts.sosreport)
+            soses = []
+            for s in opts.sosreport:
+                try:
+                    soses.append(saucier.sosreport(s))
+                except ValueError as e:
+                    self.LOGGER.error(e)
             # Re-extract if individual sosreports specified
             reextract = True
         else:
