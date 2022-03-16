@@ -273,9 +273,8 @@ class Grocer(SauceryBase):
     def stock_actions(self, item, shelf):
         if self.dry_run:
             return
-        results = (self.config.lookup('stock', {'item': item, 'shelf': shelf}) or {}).values()
-        for r in results:
-            self.LOGGER.info(r)
+        for v in self.lookup('stock_actions', item=item, shelf=shelf).values():
+            self.LOGGER.info(v)
 
     def dispose(self):
         for item in self.grocery.discounts:
@@ -289,7 +288,7 @@ class Grocer(SauceryBase):
         self.grocery.shelve(item, self.grocery.expired_shelf, replace=True)
 
     def item_shelf(self, item):
-        shelves = self.config.lookup('shelf', {'item': item}).values()
+        shelves = self.lookup('item_shelf', item=item).values()
         if not shelves:
             return None
         return Path('').joinpath(*shelves)

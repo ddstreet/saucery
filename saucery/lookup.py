@@ -25,54 +25,54 @@ class LookupBase(UserDict):
             self.LOGGER.error(f'Missing config: {key}')
         return value
 
-    def lookup_order(self, name):
-        return self._log_lookup_key(f'{name}_lookup_order', '').split()
+    @cached_property
+    def lookup_order(self):
+        return self._log_lookup_key('lookup_order', '').split()
 
-    def lookup_keys(self, name):
-        return self._log_lookup_key(f'{name}_lookup_keys', '').split()
+    @cached_property
+    def lookup_keys(self):
+        return self._log_lookup_key('lookup_keys', '').split()
 
-    def lookup(self, name, fmtmap):
+    def lookup(self, **kwargs):
         '''Lookup value(s) from our config file.
 
         This performs lookups from our config file and returns the resulting
         value(s) as a dict of key: value pairs.
 
-        The 'name' parameter is used to lookup 2 initial keys:
-          - {name}_order
-          - {name)_keys
-
-        The '{name}_order' config value is split() and each key used to lookup
+        The 'lookup_order' config value is split() and each key used to lookup
         a value through the lookup_value() method, which will call through all
-        subclasses that are part of this instance. The initial format map is
-        what is passed in the 'fmtmap' parameter, or {}. As each value is looked up,
-        it is added as a key: value pair into the format map.
+        subclasses that are part of this instance. The initial format map contains
+        the key: value pairs provided as kwargs. As each value is looked up, it
+        is converted to str() and added as a key: value pair into the format map.
 
-        The '{name}_keys' config value is split() and each key used to form
+        The 'lookup_keys' config value is split() and each key used to form
         a final dict() that is returned from this method. The values are pulled
         from the format map values.
 
-        If any lookup_value() returns None, lookup stops and this returns None.
-        All lookup_value() values are converted to str when added to the format map.
+        If any lookup_value() returns None, lookup stops and this returns {}.
 
         The intention of this class is to allow flexible configuration in our
         config file, that can build on the results of previous operations, to
         craft a final result that is returned to the caller in a generic way.
 
-        Returns a dict() of key: value pairs, with all keys being exactly what
-        is listed in the value of the '{name}_keys' lookup.
+        On success, returns a dict() of key: value pairs, with all keys being
+        exactly what is listed in the value of the 'lookup_keys' lookup. On
+        failure, returns {}.
         '''
-        order = self.lookup_order(name)
-        keys = self.lookup_keys(name)
-        if not all((order, keys)):
-            return None
-        fmtmap = fmtmap or {}
-        for key in order:
+        if not self.lookup_order:
+            self.LOGGER.debug(f'missing lookup_order')
+            return {}
+        if not self.lookup_keys:
+            self.LOGGER.debug(f'missing lookup_keys')
+            return {}
+        fmtmap = {**kwargs}
+        for key in self.lookup_order:
             value = self.lookup_value(key, fmtmap)
             if value is None:
-                return None
+                return {}
             fmtmap[key] = str(value)
         self.LOGGER.debug(f'lookup result: {fmtmap}')
-        return {k: fmtmap.get(k) for k in self.lookup_keys(name)}
+        return {k: fmtmap.get(k) for k in self.lookup_keys}
 
 
 class PythonLookup(LookupBase):

@@ -17,6 +17,7 @@ from configparser import DuplicateSectionError
 from contextlib import suppress
 from datetime import datetime
 from functools import cached_property
+from functools import lru_cache
 from pathlib import Path
 
 from .lookup import ConfigLookup
@@ -56,15 +57,25 @@ class SauceryBase(ABC):
         return self.kwargs.get('dry_run', False)
 
     @cached_property
-    def config(self):
-        config = ConfigParser(defaults=self.DEFAULTS)
-        config.read([self.DEFAULT_CONFIGDIR / f
-                     for f in self.DEFAULT_CONFIGFILES + [self._configfile]
-                     if f])
-        section = self.CONFIG_SECTION()
+    def configparser(self):
+        configparser = ConfigParser(defaults=self.DEFAULTS)
+        configparser.read([self.DEFAULT_CONFIGDIR / f
+                           for f in self.DEFAULT_CONFIGFILES + [self._configfile]
+                           if f])
+        return configparser
+
+    @lru_cache
+    def configsection(self, section):
         with suppress(DuplicateSectionError):
-            config.add_section(section)
-        return ConfigLookup(config[section])
+            self.configparser.add_section(section)
+        return ConfigLookup(self.configparser[section])
+
+    @cached_property
+    def config(self):
+        return self.configsection(self.CONFIG_SECTION())
+
+    def lookup(self, name, **kwargs):
+        return self.configsection(name).lookup(**kwargs)
 
 
 class Saucery(SauceryBase):

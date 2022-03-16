@@ -47,12 +47,10 @@ class Saucier(SauceryBase):
     def buy(self, item, extract=False):
         sos = self.sosreport(item)
         self.grocery.buy(item, sos)
-        results = self.config.lookup('meta', {'item': item})
-        if results:
-            for k, v in results.items():
-                try:
-                    setattr(sos.meta, k, v)
-                except AttributeError:
-                    self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
+        for k, v in self.lookup('sosreport_meta', item=item).items():
+            try:
+                setattr(sos.meta, k, v)
+            except AttributeError:
+                self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
         if extract:
             Thread(target=sos.extract).start()
