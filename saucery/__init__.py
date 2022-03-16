@@ -53,10 +53,24 @@ class SauceryBase(ABC):
         self._configfile = configfile_or_instance
         self.kwargs = kwargs
         self.setup_logging()
+        self.log_dry_run()
 
     @property
     def dry_run(self):
         return self.kwargs.get('dry_run', False)
+
+    LOGGED_DRY_RUN = False
+    def log_dry_run(self):
+        if SauceryBase.LOGGED_DRY_RUN:
+            return
+        SauceryBase.LOGGED_DRY_RUN = True
+        if self.dry_run:
+            msg = 'DRY-RUN mode'
+            if int(self.dry_run or 0) > 1:
+                msg += ' (NO file logging)'
+            else:
+                msg += ' (with file logging)'
+            self.LOGGER.info(msg)
 
     LOGGING_SETUP = False
     def setup_logging(self):
@@ -65,6 +79,8 @@ class SauceryBase(ABC):
         SauceryBase.LOGGING_SETUP = True
         name = self.kwargs.get('log_name')
         if not name:
+            return
+        if int(self.dry_run or 0) > 1:
             return
         permanent = self._permanent_log_handler(name)
         timestamped = self._timestamped_log_handler(name)

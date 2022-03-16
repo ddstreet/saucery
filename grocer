@@ -33,17 +33,10 @@ def main():
     logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
     logger = logging.getLogger()
 
-    log_name = 'grocer'
-    if opts.dry_run:
-        logger.info('DRY-RUN mode')
-        if opts.dry_run > 1:
-            logger.info('NO file logging')
-            log_name=None
-
     grocer = Grocer(opts.config, dry_run=opts.dry_run,
                     server=opts.server,
                     username=opts.username,
-                    log_name=log_name)
+                    log_name='grocer')
 
     logger.debug(f'params: {vars(opts)}')
 
