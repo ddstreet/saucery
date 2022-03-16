@@ -10,7 +10,7 @@ from .grocery import Grocery
 
 class Saucier(SauceryBase):
     DEFAULTS = {
-        'max_age': '90 days',
+        'max_age': '1 day',
     }
 
     @classmethod

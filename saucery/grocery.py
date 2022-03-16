@@ -25,9 +25,6 @@ from . import SauceryBase
 class Grocery(SauceryBase):
     DEFAULTS = {
         'shelflife': '30 days',
-        'deliveries': 'uploads',
-        'discounts': 'triage',
-        'expired': 'trash',
     }
 
     @classmethod
