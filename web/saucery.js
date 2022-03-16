@@ -194,8 +194,8 @@ function SauceryTree(elements) {
 
 function DateToYMD(date) {
     return (String(date.getUTCFullYear()).padStart(4, '0') + '-' +
-            String(date.getUTCMonth()).padStart(2, '0') + '-' +
-            String(date.getUTCDay()).padStart(2, '0'));
+            String(date.getUTCMonth()+1).padStart(2, '0') + '-' +
+            String(date.getUTCDate()).padStart(2, '0'));
 }
 
 function JoinAnchors(anchors, separatortext=', ') {
