@@ -279,10 +279,10 @@ class Grocer(SauceryBase):
     def dispose(self):
         for item in self.grocery.discounts:
             if not self.grocery.is_fresh(item):
-                self.LOGGER.info(f'Disposing of expired file {item} with age {age}')
+                self.LOGGER.info(f'Disposing of expired file {item} with age {self.grocery.age(item)}')
                 self.dispose_item(item)
             else:
-                self.LOGGER.debug(f'Leaving unexpired file {item} with age {age}')
+                self.LOGGER.debug(f'Leaving unexpired file {item} with age {self.grocery.age(item)}')
 
     def dispose_item(self, item):
         self.grocery.shelve(item, self.grocery.expired_shelf, replace=True)
