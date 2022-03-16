@@ -106,14 +106,14 @@ class Grocery(SauceryBase):
         return listdir(path=shelf)
 
     def create_shelf(self, shelf):
-        self.LOGGER.debug(f'mkdir: {shelf}')
-        try:
+        if not self.exists(shelf):
+            self.LOGGER.debug(f'mkdir: {shelf}')
             if not self.dry_run:
-                if not self.exists(shelf):
+                try:
                     self.sftp.mkdir(shelf)
-        except IOError:
-            self.LOGGER.error(f'Failed to mkdir {shelf}')
-            return False
+                except IOError:
+                    self.LOGGER.error(f'Failed to mkdir {shelf}')
+                    return False
         return True
 
     def _shelve(self, item, shelf, dest):
@@ -290,7 +290,8 @@ class Grocer(SauceryBase):
         shelves = self.lookup('item_shelf', item=item).values()
         if not shelves:
             return None
-        return Path('').joinpath(*shelves)
+        shelf = str(Path('').joinpath(*shelves))
+        return shelf if shelf != '.' else None
 
 
 class Manager(SauceryBase):
