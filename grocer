@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from saucery.grocery import Grocery
+from saucery.grocery import Grocer
 
 
 def main():
@@ -35,23 +35,23 @@ def main():
     if opts.dry_run:
         logger.info('DRY-RUN mode')
 
-    grocery = Grocery(opts.config, dry_run=opts.dry_run,
-                      server=opts.server,
-                      username=opts.username,
-                      log_remote=opts.log_remote)
+    grocer = Grocer(opts.config, dry_run=opts.dry_run,
+                    server=opts.server,
+                    username=opts.username,
+                    log_remote=opts.log_remote)
 
     if opts.stock:
         if opts.list:
-            for item in grocery.deliveries:
+            for item in grocer.grocery.deliveries:
                 logger.info(item)
         else:
-            grocery.grocer.stock()
+            grocer.stock()
     elif opts.expired:
         if opts.list:
-            for item in grocery.discounts:
+            for item in grocer.grocery.discounts:
                 logger.info(item)
         else:
-            grocery.grocer.dispose()
+            grocer.dispose()
 
 
 if __name__ == "__main__":
