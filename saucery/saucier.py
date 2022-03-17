@@ -56,8 +56,8 @@ class Saucier(SauceryBase):
             except AttributeError:
                 self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
         if extract:
+            extraction = Thread(target=sos.extract)
+            extraction.start()
             if sear:
-                target = lambda: sos.extract() and sos.sear()
-            else:
-                target = lambda: sos.extract()
-            Thread(target=target).start()
+                searing = Thread(target=lambda: extraction.join() or sos.sear())
+                searing.start()
