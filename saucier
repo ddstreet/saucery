@@ -49,30 +49,18 @@ def main():
 
     if opts.shop:
         for sos in saucier.browse(max_age=opts.max_age):
-            saucier.buy(sos, extract=opts.extract, sear=opts.sear)
-    else:
-        if opts.sosreport:
-            soses = []
-            for s in opts.sosreport:
-                try:
-                    soses.append(saucier.sosreport(s))
-                except ValueError as e:
-                    logger.error(e)
-            # Re-extract if individual sosreports specified
-            reextract = True
-        else:
-            soses = saucier.sosreports
-            # Don't re-extract *all* sosreports
-            reextract = False
-        for sos in soses:
-            if sos.exists():
-                logger.info(sos)
-                if opts.extract:
-                    sos.extract(reextract=reextract)
-                if opts.sear:
-                    sos.sear()
-            else:
-                logger.error(f'Sosreport {sos} not found.')
+            saucier.buy(sos, extract=opts.extract, sear=opts.sear, json=opts.json)
+        return
+
+    sosreports = opts.sosreport or saucier.sosreports
+
+    # only force reextract/resear if specific sosreports specified
+    force = bool(opts.sosreport)
+
+    if opts.extract:
+        saucier.extract(sosreports, reextract=force)
+    if opts.sear:
+        saucier.sear(sosreports, resear=force)
     if opts.json:
         saucier.create_json()
 

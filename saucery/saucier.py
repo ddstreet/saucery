@@ -1,10 +1,13 @@
 #!/usr/bin/python
 
+import os
+
+from concurrent import futures
 from functools import cached_property
 from pathlib import Path
-from threading import Thread
 
 from . import SauceryBase
+from . import SOS
 from .grocery import Grocery
 
 
@@ -18,6 +21,8 @@ class Saucier(SauceryBase):
         return 'saucier'
 
     def sosreport(self, name):
+        if isinstance(name, SOS):
+            return name
         return self.saucery.sosreport(Path(name).name)
 
     @property
@@ -44,10 +49,7 @@ class Saucier(SauceryBase):
     def sosreports(self):
         yield from self.saucery.sosreports
 
-    def create_json(self):
-        return self.saucery.create_json()
-
-    def buy(self, item, extract=False, sear=False):
+    def buy(self, item, extract=False, sear=False, json=False):
         sos = self.sosreport(item)
         self.grocery.buy(item, sos)
         for k, v in self.lookup('sosreport_meta', item=item).items():
@@ -56,8 +58,41 @@ class Saucier(SauceryBase):
             except AttributeError:
                 self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
         if extract:
-            extraction = Thread(target=sos.extract)
-            extraction.start()
-            if sear:
-                searing = Thread(target=lambda: extraction.join() or sos.sear())
-                searing.start()
+            sos.extract()
+        if sear:
+            sos.sear()
+        if json:
+            self.create_json()
+
+    def _sosreports(self, sosreports):
+        soses = []
+        for s in sosreports:
+            try:
+                soses.append(self.sosreport(s))
+            except ValueError as e:
+                self.LOGGER.info(e)
+        return soses
+
+    def _parallel(self, sosreports, action, parallel=True, **kwargs):
+        sosreports = self._sosreports(sosreports)
+
+        run = lambda s: getattr(s, action)(**kwargs)
+
+        if not parallel:
+            for s in sosreports:
+                run(s)
+            return
+
+        if parallel is True:
+            parallel = len(os.sched_getaffinity(0))
+        with futures.ThreadPoolExecutor(max_workers=int(parallel)) as executor:
+            executor.map(run, sosreports)
+
+    def extract(self, sosreports, *, parallel=True, reextract=False):
+        self._parallel(sosreports, 'extract', parallel=parallel, reextract=reextract)
+
+    def sear(self, sosreports, *, parallel=True, resear=False):
+        self._parallel(sosreports, 'sear', parallel=parallel, resear=resear)
+
+    def create_json(self):
+        return self.saucery.create_json()

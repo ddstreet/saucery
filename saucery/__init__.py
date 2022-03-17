@@ -211,6 +211,29 @@ class Saucery(SauceryBase):
             tmpfile.rename(self.sauceryreport)
 
 
+class SOSMetaProperty(property):
+    def __init__(self, name):
+        self.name = name
+        super().__init__(self.read, self.write, self.unlink)
+
+    def path(self, sos):
+        return sos.workdir / self.name
+
+    def read(self, sos):
+        with suppress(FileNotFoundError):
+            return self.path(sos).read_text().strip()
+        return None
+
+    def write(self, sos, value):
+        if not sos.dry_run:
+            sos.create_workdir()
+            self.path(sos).write_text(f'{value}\n' if value else '')
+
+    def unlink(self, sos):
+        if not sos.dry_run:
+            self.path(sos).unlink(missing_ok=True)
+
+
 class SOS(SauceryBase):
     @classmethod
     def CONFIG_SECTION(cls):
@@ -270,6 +293,11 @@ class SOS(SauceryBase):
     def workdir(self):
         return self.sosreport.parent / self.name
 
+    def create_workdir(self):
+        if not self.workdir.is_dir():
+            self.workdir.mkdir(parents=True, exist_ok=False)
+            self.workdir.chmod(0o755)
+
     @property
     def metaproperties(self):
         return self.config.get('metaproperties', '').split()
@@ -278,7 +306,9 @@ class SOS(SauceryBase):
     def meta(self):
         class SOSMeta(object):
             __slots__ = self.metaproperties
-            _sos = self
+            workdir = self.workdir
+            dry_run = self.dry_run
+            create_workdir = self.create_workdir
         for n in self.metaproperties:
             setattr(SOSMeta, n, SOSMetaProperty(n))
         return SOSMeta()
@@ -309,10 +339,14 @@ class SOS(SauceryBase):
     def file_bytes(self, filename, **kwargs):
         return self._file_read(filename, 'read_bytes', **kwargs)
 
+    extracted = SOSMetaProperty('extracted')
+
     def extract(self, *, reextract=False):
+        print(f'extracting {self}')
         if self.filesdir.exists():
-            if reextract:
-                self.LOGGER.info(f'Removing existing data at {self.filesdir}')
+            if reextract or not self.extracted:
+                partial = '' if self.extracted else 'partial '
+                self.LOGGER.info(f'Removing existing {partial}data at {self.filesdir}')
                 if not self.dry_run:
                     shutil.rmtree(self.filesdir)
             else:
@@ -323,13 +357,17 @@ class SOS(SauceryBase):
         if self.dry_run:
             return
 
-        self.workdir.mkdir(parents=True, exist_ok=True)
-        self.workdir.chmod(0o755)
+        self.create_workdir()
+
+        count = 0
+        size = 0
         with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
             with tarfile.open(self.sosreport) as tar:
                 for m in tar.getmembers():
                     if m.isdev():
                         continue
+                    count += 1
+                    size += m.size
                     tar.extract(m, path=tmpdir)
                     if m.issym():
                         continue
@@ -342,18 +380,29 @@ class SOS(SauceryBase):
                 raise ValueError(f'sosreport contains multiple top-level directories')
             # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
             topfiles[0].rename(self.filesdir)
+        self.LOGGER.debug(f'Extracted {count} members for {size} bytes: {self.filesdir}')
+        self.extracted = True
 
-    def sear(self):
-        self.LOGGER.debug(f'HotSOS: {self.filesdir}')
-        if self.dry_run or not self.filesdir.exists():
+    hotsos_json = SOSMetaProperty('hotsos.json')
+
+    def sear(self, *, resear=False):
+        if not self.filesdir.exists() or not self.extracted:
+            self.LOGGER.error(f"Can't run HotSOS, sosreport not extracted: {self.filesdir}")
             return
 
-        hotsos_json = self.workdir / 'hotsos.json'
+        if self.hotsos_json and not resear:
+            self.LOGGER.info(f'Already seared, not running HotSOS')
+            return
+
+        self.LOGGER.debug(f'HotSOS: {self.filesdir}')
+        if self.dry_run:
+            return
+
         cmd = ['hotsos', '--json', '--all-logs']
         cmd += ['--max-parallel-tasks', str(len(os.sched_getaffinity(0)))]
         cmd += [str(self.filesdir)]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, encoding='utf-8')
-        hotsos_json.write_text(result.stdout)
+        self.hotsos_json = result.stdout
 
     @property
     def datetime(self):
@@ -400,38 +449,3 @@ class SOS(SauceryBase):
     def json(self):
         self.LOGGER.debug(f'Generating JSON for {self.name}')
         return {**self.base_json, **self.meta_json}
-
-
-class SOSMetaProperty(property):
-    def __init__(self, name):
-        self.name = name
-        super().__init__(self.read, self.write, self.unlink)
-
-    def metafile(self, meta):
-        return meta._sos.workdir / self.name
-
-    def dry_run(self, meta):
-        return meta._sos.dry_run
-
-    def read(self, meta):
-        with suppress(FileNotFoundError):
-            return self.metafile(meta).read_text().strip()
-        return None
-
-    def write(self, meta, value):
-        if self.dry_run(meta):
-            return
-
-        if value:
-            workdir = meta._sos.workdir
-            if not workdir.is_dir():
-                workdir.mkdir(parents=True, exist_ok=False)
-                workdir.chmod(0o755)
-            self.metafile(meta).write_text(f'{value}\n')
-        else:
-            # unlink if no value
-            self.unlink(meta)
-
-    def unlink(self, meta):
-        if not self.dry_run(meta):
-            self.metafile(meta).unlink(missing_ok=True)
