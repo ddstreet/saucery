@@ -49,7 +49,7 @@ class Saucier(SauceryBase):
     def sosreports(self):
         yield from self.saucery.sosreports
 
-    def buy(self, item, extract=False, sear=False, json=False):
+    def buy(self, item):
         sos = self.sosreport(item)
         self.grocery.buy(item, sos)
         for k, v in self.lookup('sosreport_meta', item=item).items():
@@ -57,12 +57,6 @@ class Saucier(SauceryBase):
                 setattr(sos.meta, k, v)
             except AttributeError:
                 self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
-        if extract:
-            sos.extract()
-        if sear:
-            sos.sear()
-        if json:
-            self.create_json()
 
     def _sosreports(self, sosreports):
         soses = []

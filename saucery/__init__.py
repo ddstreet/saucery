@@ -21,6 +21,7 @@ from functools import lru_cache
 from logging import FileHandler
 from logging import Formatter
 from pathlib import Path
+from threading import Lock
 
 from .lookup import ConfigLookup
 
@@ -201,11 +202,13 @@ class Saucery(SauceryBase):
             return sosreport
         return SOS(self, sosreport=path)
 
+    JSON_LOCK = Lock()
+
     def create_json(self):
         if self.dry_run:
             return
 
-        with tempfile.TemporaryDirectory(dir=self.sauceryreport.parent) as tmpdir:
+        with self.JSON_LOCK, tempfile.TemporaryDirectory(dir=self.sauceryreport.parent) as tmpdir:
             tmpfile = Path(tmpdir) / 'tmpfile'
             tmpfile.write_text(json.dumps([s.json for s in self.sosreports], indent=2, sort_keys=True))
             tmpfile.rename(self.sauceryreport)
