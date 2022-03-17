@@ -145,7 +145,10 @@ function SauceryTable(elements,
         });
     });
 
-    table.appendTo(elements).DataTable({ 'pageLength': 25, });
+    table.appendTo(elements).DataTable({
+        'pageLength': 25,
+        'order': [[ 4, 'desc' ], [ 2, 'desc' ]],
+    });
 }
 
 function SauceryHotSOS(elements) {
