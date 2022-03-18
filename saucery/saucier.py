@@ -47,7 +47,7 @@ class Saucier(SauceryBase):
 
     @property
     def sosreports(self):
-        yield from self.saucery.sosreports
+        return self.saucery.sosreports
 
     def buy(self, item):
         sos = self.sosreport(item)
@@ -57,6 +57,7 @@ class Saucier(SauceryBase):
                 setattr(sos.meta, k, v)
             except AttributeError:
                 self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
+        return sos
 
     def _sosreports(self, sosreports):
         soses = []

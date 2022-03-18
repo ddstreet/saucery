@@ -48,9 +48,7 @@ def main():
     logger.debug(f'params: {vars(opts)}')
 
     if opts.shop:
-        sosreports = saucier.browse(max_age=opts.max_age)
-        for sos in sosreports:
-            saucier.buy(sos)
+        sosreports = [saucier.buy(s) for s in saucier.browse(max_age=opts.max_age)]
     else:
         sosreports = opts.sosreport or saucier.sosreports
 
