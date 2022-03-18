@@ -99,7 +99,7 @@ class Grocery(SauceryBase):
     def exists(self, item):
         return self.stat(item) is not None
 
-    def listdir(self, shelf, attr=False):
+    def iterdir(self, shelf, attr=False):
         if not self.exists(shelf):
             return []
         listdir = self.sftp.listdir_attr if attr else self.sftp.listdir
@@ -115,6 +115,12 @@ class Grocery(SauceryBase):
                     self.LOGGER.error(f'Failed to mkdir {shelf}')
                     return False
         return True
+
+    def remove_shelf(self, shelf):
+        if self.exists(shelf) and self.is_shelf(shelf):
+            self.LOGGER.debug(f'Removing shelf {shelf}')
+            if not self.dry_run:
+                self.sftp.rmdir(shelf)
 
     def _shelve(self, item, shelf, dest):
         self.LOGGER.info(f'{item} -> {dest}')
@@ -142,7 +148,7 @@ class Grocery(SauceryBase):
     def shelf_items(self, shelf):
         if not self.exists(shelf):
             return []
-        yield from (str(Path(shelf) / item) for item in self.listdir(shelf))
+        yield from (str(Path(shelf) / item) for item in self.iterdir(shelf))
 
     def is_shelf(self, item):
         return self.size(item) is None
@@ -150,39 +156,45 @@ class Grocery(SauceryBase):
     def is_item(self, item):
         return not self.is_shelf(item)
 
-    def _browse(self, paths, match, max_age, path=Path('.')):
+    def _browse(self, paths, match, path=Path('.'), browse_items=True):
         self.LOGGER.debug(f'Browsing {path}/{match}')
-        entries = self.listdir(str(path), attr=True)
+        entries = self.iterdir(str(path), attr=True)
         for e in entries:
             if not re.match(match, e.filename):
                 continue
             newpath = path / e.filename
-            if paths and self.is_shelf(e):
-                yield from self._browse(paths[1:], paths[0], max_age, path=newpath)
-            elif not paths and self.is_item(e) and self.is_fresh(e, max_age):
-                self.LOGGER.debug(f'Browsed to {newpath}')
-                yield str(newpath)
+            if paths:
+                if self.is_shelf(e):
+                    yield from self._browse(paths[1:], paths[0], path=newpath, browse_items=browse_items)
+            else:
+                if self.is_item(e) == browse_items:
+                    self.LOGGER.debug(f'Browsed to {newpath}')
+                    yield str(newpath)
 
-    def browse(self, shelves, max_age=None):
+    def browse(self, shelves, *, max_age=None, browse_items=True):
         '''Browse.
 
         The 'shelves' value must be a str representing the specific path to browse.
         It will be first split by '/', and each path before the final matched to
-        dirs on the server. The final path is matched to files in the preceding
-        dirs.
+        dirs on the server. The final path is matched to files (or dirs, if
+        browse_items is False) in the preceding dirs.
 
         If 'max_age' is not provided, this grocery's configured shelflife is used.
-        If provided, it must be a timedelta, (tz-naive) datetime, or str.
+        If provided, it must be a timedelta, (tz-naive) datetime, or str. To browse
+        all items (or shelves) regardless of age, use timedelta.max.
 
         This will use python regex matching for each entry in the path.
 
         Returns an iterator of all full paths matching the 'shelves' value, or [].
         '''
+        shelves = shelves or ''
         paths = shelves.lstrip('/').split('/')
-        try:
-            yield from self._browse(paths[1:], paths[0], max_age=self.parse_age(max_age))
-        except IndexError:
+        if not paths:
             return []
+        max_age = self.parse_age(max_age)
+        for item in self._browse(paths[1:], paths[0], browse_items=browse_items):
+            if self.is_fresh(item, max_age):
+                yield item
 
     def progress(self, n, total):
         if not sys.stderr.isatty():
@@ -254,6 +266,15 @@ class Grocer(SauceryBase):
     @classmethod
     def CONFIG_SECTION(cls):
         return 'grocer'
+
+    @property
+    def shelves(self):
+        return self.config.get('shelves')
+
+    def clean(self):
+        for shelf in self.grocery.browse(self.shelves, max_age=timedelta.max, browse_items=False):
+            if not self.grocery.iterdir(shelf):
+                self.grocery.remove_shelf(shelf)
 
     def stock(self):
         for item in self.grocery.deliveries:

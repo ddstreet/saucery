@@ -25,6 +25,8 @@ def main():
                         help='Dry-run, do not perform actions (use twice to stop file logging also)')
     parser.add_argument('-l', '--list', action='store_true', help='Only list files')
     action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument('-C', '--clean', action='store_true',
+                        help='Clean (remove) any empty shelves')
     action.add_argument('-s', '--stock', action='store_true',
                         help='Stock the new sosreports/files')
     action.add_argument('-e', '--expired', action='store_true',
@@ -41,7 +43,9 @@ def main():
 
     logger.debug(f'params: {vars(opts)}')
 
-    if opts.stock:
+    if opts.clean:
+        grocer.clean()
+    elif opts.stock:
         if opts.list:
             for item in grocer.grocery.deliveries:
                 logger.info(item)
