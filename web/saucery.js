@@ -152,7 +152,7 @@ function SauceryTable(elements,
 }
 
 function SauceryHotSOS(elements) {
-    $('<a>').attr('href', '/sos/' + SauceryServiceValue + '/hotsos.json').text('HotSOS')
+    $('<a>').attr('href', '/sos/' + SauceryServiceValue + '/hotsos.yaml').text('HotSOS')
         .appendTo(elements);
 }
 

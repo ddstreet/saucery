@@ -386,14 +386,14 @@ class SOS(SauceryBase):
         self.LOGGER.debug(f'Extracted {count} members for {size} bytes: {self.filesdir}')
         self.extracted = True
 
-    hotsos_json = SOSMetaProperty('hotsos.json')
+    hotsos_yaml = SOSMetaProperty('hotsos.yaml')
 
     def sear(self, *, resear=False):
         if not self.filesdir.exists() or not self.extracted:
             self.LOGGER.error(f"Can't run HotSOS, sosreport not extracted: {self.filesdir}")
             return
 
-        if self.hotsos_json and not resear:
+        if self.hotsos_yaml and not resear:
             self.LOGGER.info(f'Already seared, not running HotSOS')
             return
 
@@ -401,11 +401,11 @@ class SOS(SauceryBase):
         if self.dry_run:
             return
 
-        cmd = ['hotsos', '--json', '--all-logs']
+        cmd = ['hotsos', '--all-logs']
         cmd += ['--max-parallel-tasks', str(len(os.sched_getaffinity(0)))]
         cmd += [str(self.filesdir)]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, encoding='utf-8')
-        self.hotsos_json = result.stdout
+        self.hotsos_yaml = result.stdout
 
     @property
     def datetime(self):
