@@ -215,6 +215,11 @@ class Saucery(SauceryBase):
 
 
 class SOSMetaProperty(property):
+    def __new__(cls, name, valuetype=str):
+        if valuetype == bool:
+            cls = BoolSOSMetaProperty
+        return super().__new__(cls)
+
     def __init__(self, name, valuetype=str):
         self.name = name
         self.valuetype = valuetype
@@ -231,10 +236,7 @@ class SOSMetaProperty(property):
     def write(self, sos, value):
         if not sos.dry_run:
             sos.create_workdir()
-            if self.valuetype == bool:
-                value = str(bool(value))
-            else:
-                value = str(value or '')
+            value = str(value or '')
             if value and '\n' not in value:
                 value += '\n'
             self.path(sos).write_text(value)
@@ -242,6 +244,20 @@ class SOSMetaProperty(property):
     def unlink(self, sos):
         if not sos.dry_run:
             self.path(sos).unlink(missing_ok=True)
+
+
+class BoolSOSMetaProperty(SOSMetaProperty):
+    def __init__(self, name, valuetype=bool):
+        super().__init__(name, str)
+
+    def read(self, sos):
+        return super().read(sos) == 'True'
+
+    def write(self, sos, value):
+        if value is None:
+            self.unlink(sos)
+        else:
+            super().write(sos, str(value == True))
 
 
 class SOS(SauceryBase):
