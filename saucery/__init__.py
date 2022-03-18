@@ -70,7 +70,7 @@ class SauceryBase(ABC):
             msg = 'DRY-RUN mode'
             if int(self.dry_run or 0) > 1:
                 msg += ' (NO file logging)'
-            else:
+            elif self.kwargs.get('logname'):
                 msg += ' (with file logging)'
             self.LOGGER.info(msg)
 
