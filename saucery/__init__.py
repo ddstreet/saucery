@@ -215,22 +215,29 @@ class Saucery(SauceryBase):
 
 
 class SOSMetaProperty(property):
-    def __init__(self, name):
+    def __init__(self, name, valuetype=str):
         self.name = name
+        self.valuetype = valuetype
         super().__init__(self.read, self.write, self.unlink)
 
     def path(self, sos):
         return sos.workdir / self.name
 
     def read(self, sos):
-        with suppress(FileNotFoundError):
-            return self.path(sos).read_text().strip()
-        return None
+        with suppress(FileNotFoundError, ValueError):
+            return self.valuetype(self.path(sos).read_text().strip())
+        return self.valuetype()
 
     def write(self, sos, value):
         if not sos.dry_run:
             sos.create_workdir()
-            self.path(sos).write_text(f'{value}\n' if value else '')
+            if self.valuetype == bool:
+                value = str(bool(value))
+            else:
+                value = str(value or '')
+            if value and '\n' not in value:
+                value += '\n'
+            self.path(sos).write_text(value)
 
     def unlink(self, sos):
         if not sos.dry_run:
@@ -342,7 +349,10 @@ class SOS(SauceryBase):
     def file_bytes(self, filename, **kwargs):
         return self._file_read(filename, 'read_bytes', **kwargs)
 
-    extracted = SOSMetaProperty('extracted')
+    extracted = SOSMetaProperty('extracted', bool)
+    file_list = SOSMetaProperty('file_list')
+    file_count = SOSMetaProperty('file_count', int)
+    total_size = SOSMetaProperty('total_size', int)
 
     def extract(self, *, reextract=False):
         print(f'extracting {self}')
@@ -362,28 +372,39 @@ class SOS(SauceryBase):
 
         self.create_workdir()
 
-        count = 0
-        size = 0
-        with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
-            with tarfile.open(self.sosreport) as tar:
-                for m in tar.getmembers():
-                    if m.isdev():
-                        continue
-                    count += 1
-                    size += m.size
-                    tar.extract(m, path=tmpdir)
-                    if m.issym():
-                        continue
-                    mode = 0o775 if m.isdir() else 0o664
-                    (Path(tmpdir) / m.name).chmod(mode)
-            topfiles = list(Path(tmpdir).iterdir())
-            if len(topfiles) == 0:
-                raise ValueError(f'No files found in sosreport')
-            if len(topfiles) > 1:
-                raise ValueError(f'sosreport contains multiple top-level directories')
-            # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
-            topfiles[0].rename(self.filesdir)
-        self.LOGGER.debug(f'Extracted {count} members for {size} bytes: {self.filesdir}')
+        self.extracted = False
+        file_list = ''
+        file_count = 0
+        total_size = 0
+        try:
+            with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
+                with tarfile.open(self.sosreport) as tar:
+                    for m in tar.getmembers():
+                        if m.isdev():
+                            continue
+                        tar.extract(m, path=tmpdir)
+                        file_list += f'{m.name}\n'
+                        file_count += 1
+                        if m.issym():
+                            continue
+                        total_size += m.size
+                        mode = 0o775 if m.isdir() else 0o664
+                        (Path(tmpdir) / m.name).chmod(mode)
+                topfiles = list(Path(tmpdir).iterdir())
+                if len(topfiles) == 0:
+                    raise ValueError(f'No files found in sosreport')
+                if len(topfiles) > 1:
+                    raise ValueError(f'sosreport contains multiple top-level directories')
+                # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
+                topfiles[0].rename(self.filesdir)
+        except Exception as e:
+            self.LOGGER.exception(e)
+            raise
+        finally:
+            self.file_list = file_list
+            self.file_count = file_count
+            self.total_size = total_size
+        self.LOGGER.debug(f'Extracted {self.file_count} members for {self.total_size} bytes: {self.filesdir}')
         self.extracted = True
 
     hotsos_yaml = SOSMetaProperty('hotsos.yaml')
