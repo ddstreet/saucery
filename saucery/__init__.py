@@ -205,6 +205,7 @@ class Saucery(SauceryBase):
     JSON_LOCK = Lock()
 
     def create_json(self):
+        self.LOGGER.info(f'Creating JSON index {self.sauceryreport}')
         if self.dry_run:
             return
 
@@ -371,7 +372,6 @@ class SOS(SauceryBase):
     total_size = SOSMetaProperty('total_size', int)
 
     def extract(self, *, reextract=False):
-        print(f'extracting {self}')
         if self.filesdir.exists():
             if reextract or not self.extracted:
                 partial = '' if self.extracted else 'partial '
@@ -382,7 +382,7 @@ class SOS(SauceryBase):
                 self.LOGGER.info(f'Already extracted, not re-extracting: {self.filesdir}')
                 return
 
-        self.LOGGER.info(f'Extracting {self.sosreport.name} to {self.filesdir}')
+        self.LOGGER.info(f'Extracting: {self.sosreport.name} -> {self.filesdir}')
         if self.dry_run:
             return
 
@@ -434,7 +434,7 @@ class SOS(SauceryBase):
             self.LOGGER.info(f'Already seared, not running HotSOS')
             return
 
-        self.LOGGER.debug(f'HotSOS: {self.filesdir}')
+        self.LOGGER.info(f'HotSOS: {self.filesdir}')
         if self.dry_run:
             return
 
