@@ -275,6 +275,7 @@ class Grocer(SauceryBase):
         for shelf in self.grocery.browse(self.shelves, max_age=timedelta.max, browse_items=False):
             if not self.grocery.iterdir(shelf):
                 self.grocery.remove_shelf(shelf)
+                self.LOGGER.info(f'Removed shelf: {shelf}')
 
     def stock(self):
         for item in self.grocery.deliveries:
