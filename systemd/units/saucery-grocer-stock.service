@@ -3,3 +3,4 @@ Description=Stock Grocery shelves with new deliveries
 
 [Service]
 ExecStart=grocer -s --logname grocer
+User=saucery
