@@ -290,10 +290,9 @@ class Grocer(SauceryBase):
             self.grocery.shelve(item, self.grocery.discounts_shelf, existing='rename_old')
 
     def stock_actions(self, item, shelf):
-        if self.dry_run:
-            return
-        for v in self.lookup('stock_actions', item=item, shelf=shelf).values():
-            self.LOGGER.info(v)
+        if not self.dry_run:
+            for v in self.lookup('stock_actions', item=item, shelf=shelf).values():
+                self.LOGGER.info(v)
 
     def dispose(self):
         for item in self.grocery.discounts:
