@@ -1,0 +1,5 @@
+[Unit]
+Description=Clean empty grocery shelves
+
+[Service]
+ExecStart=grocer -C --logname grocer

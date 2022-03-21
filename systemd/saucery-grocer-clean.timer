@@ -1,0 +1,5 @@
+[Unit]
+Description=Timer for Saucery Grocer shelf cleaning
+
+[Timer]
+OnUnitInactiveSec=1day

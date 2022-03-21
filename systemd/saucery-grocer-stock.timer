@@ -1,0 +1,5 @@
+[Unit]
+Description=Timer for Saucery Grocer shelf stocking
+
+[Timer]
+OnUnitInactiveSec=10min
