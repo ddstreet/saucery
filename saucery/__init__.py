@@ -201,7 +201,7 @@ class Saucery(SauceryBase):
 
         if isinstance(sosreport, SOS):
             return sosreport
-        return SOS(self, sosreport=path)
+        return SOS(instance=self, sosreport=path)
 
     JSON_LOCK = Lock()
 
