@@ -11,9 +11,8 @@ from saucery.saucier import Saucier
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', help='Alternate config file to use')
-    parser.add_argument('--username', help='Username for server')
-    parser.add_argument('--server', help='Server name')
+    parser.add_argument('--saucery', help='Location of saucery')
+    parser.add_argument('--configfile', help='Config file')
     loglevel = parser.add_mutually_exclusive_group()
     loglevel.add_argument('-q', '--quiet', dest='loglevel', const=logging.WARNING,
                           action='store_const',
@@ -31,6 +30,7 @@ def main():
     parser.add_argument('-S', '--sear', action='store_true', help='Sear (run hotsos) on the sosreport')
     parser.add_argument('-J', '--json', action='store_true', help='Rebuild the json index')
     action = parser.add_mutually_exclusive_group()
+    action.add_argument('--dumpconfig', action='store_true', help=argparse.SUPPRESS)
     action.add_argument('-s', '--shop', action='store_true',
                         help='Shop for (download) new sosreports')
     action.add_argument('sosreport', nargs='*', default=[],
@@ -40,12 +40,16 @@ def main():
     logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
     logger = logging.getLogger()
 
-    saucier = Saucier(opts.config, dry_run=opts.dry_run,
-                      server=opts.server,
-                      username=opts.username,
+    saucier = Saucier(saucery=opts.saucery,
+                      configfile=opts.configfile,
+                      dry_run=opts.dry_run,
                       logname=opts.logname)
 
     logger.debug(f'params: {vars(opts)}')
+
+    if opts.dumpconfig:
+        logger.info(saucier.dumpconfig())
+        return
 
     if opts.shop:
         sosreports = [saucier.buy(s) for s in saucier.browse(max_age=opts.max_age)]

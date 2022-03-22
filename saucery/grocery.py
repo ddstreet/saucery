@@ -28,28 +28,17 @@ class Grocery(SauceryBase):
         'shelflife': '30 days',
     }
 
-    @classmethod
-    def CONFIG_SECTION(cls):
-        return 'grocery'
-
-    def __init__(self, *args, server=None, username=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'log_sftp' not in self.config:
-            logging.getLogger('paramiko').setLevel(logging.CRITICAL)
-        self._server = server
-        self._username = username
-
     @property
     def server(self):
         try:
-            return self._server or self.config['server']
+            return self.config['server']
         except KeyError:
             raise RuntimeError('No configuration found for server')
 
     @property
     def username(self):
         try:
-            return self._username or self.config['username']
+            return self.config['username']
         except KeyError:
             raise RuntimeError('No configuration found for username')
 
@@ -263,10 +252,6 @@ class Grocery(SauceryBase):
 
 
 class Grocer(SauceryBase):
-    @classmethod
-    def CONFIG_SECTION(cls):
-        return 'grocer'
-
     @property
     def shelves(self):
         return self.config.get('shelves')
@@ -314,10 +299,6 @@ class Grocer(SauceryBase):
 
 
 class Manager(SauceryBase):
-    @classmethod
-    def CONFIG_SECTION(cls):
-        return 'manager'
-
     @property
     def snowflakes(self):
         snowflakes = self.config.get('snowflakes')

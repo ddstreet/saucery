@@ -16,10 +16,6 @@ class Saucier(SauceryBase):
         'max_age': '1 day',
     }
 
-    @classmethod
-    def CONFIG_SECTION(cls):
-        return 'saucier'
-
     def sosreport(self, name):
         if isinstance(name, SOS):
             return name

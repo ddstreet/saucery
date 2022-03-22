@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import io
 import json
 import logging
 import os
@@ -29,33 +30,48 @@ from .lookup import ConfigLookup
 class SauceryBase(ABC):
     LOGGER = logging.getLogger(__name__)
     SOSREPORT_REGEX = re.compile(r'(?i)(?P<name>sosreport-.*)\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
-    DEFAULT_CONFIGDIR = Path(os.getenv('XDG_CONFIG_HOME', '~/.config')).expanduser().resolve() / 'saucery'
-    DEFAULT_CONFIGFILES = ['saucery.conf', 'saucier.conf', 'grocery.conf', 'grocer.conf']
+    DEFAULT_SAUCERY_DIR = '/saucery'
+    DEFAULT_CONFIG_FILE = 'saucery.conf'
     DEFAULTS = {}
 
     @classmethod
-    @abstractmethod
     def CONFIG_SECTION(cls):
-        pass
+        return cls.__name__.lower()
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
         name = cls.__name__.lower()
         attr = f'_{name}'
-        prop = cached_property(lambda self: getattr(self, attr, cls(self)))
+        prop = cached_property(lambda self: getattr(self, attr, cls(instance=self)))
         prop.__set_name__(SauceryBase, name)
+        # This allows all subclasses to access other instances by 'self.CLASSNAME',
+        # for example a grocer instance can access the saucery with 'self.saucery'
         setattr(SauceryBase, name, prop)
 
-    def __init__(self, configfile_or_instance=None, **kwargs):
+    def __init__(self, *, instance=None, **kwargs):
         super().__init__()
-        if isinstance(configfile_or_instance, SauceryBase):
-            setattr(self, f'_{configfile_or_instance.__class__.__name__}', configfile_or_instance)
-            kwargs = ChainMap(kwargs, configfile_or_instance.kwargs)
-            configfile_or_instance = configfile_or_instance._configfile
-        self._configfile = configfile_or_instance
+        if instance:
+            setattr(self, f'_{instance.__class__.__name__}', instance)
+            kwargs = ChainMap(kwargs, instance.kwargs)
         self.kwargs = kwargs
         self.setup_logging()
         self.log_dry_run()
+
+    @property
+    def saucerydir(self):
+        path = Path(self.kwargs.get('saucery') or self.DEFAULT_SAUCERY_DIR)
+        if not path.exists():
+            raise ValueError(f'Saucery location does not exist, please create it: {path}')
+        if not path.is_dir():
+            raise ValueError(f'Saucery location is not a dir, please fix: {path}')
+        return path
+
+    @property
+    def configfiles(self):
+        usercfgdir = Path(os.getenv('XDG_CONFIG_HOME', '~/.config')).expanduser().resolve() / 'saucery'
+        files = [Path(f).expanduser() for f in [self.DEFAULT_CONFIG_FILE, self.kwargs.get('configfile')] if f]
+        dirs = [self.saucerydir / 'config', usercfgdir]
+        return [d / f for d in dirs for f in files]
 
     @property
     def dry_run(self):
@@ -132,9 +148,7 @@ class SauceryBase(ABC):
     @cached_property
     def configparser(self):
         configparser = ConfigParser(defaults=self.DEFAULTS)
-        configparser.read([self.DEFAULT_CONFIGDIR / f
-                           for f in self.DEFAULT_CONFIGFILES + [self._configfile]
-                           if f])
+        configparser.read(self.configfiles)
         return configparser
 
     @lru_cache
@@ -143,7 +157,12 @@ class SauceryBase(ABC):
             self.configparser.add_section(section)
         return ConfigLookup(section, self.configparser[section])
 
-    @cached_property
+    def dumpconfig(self):
+        buf = io.StringIO()
+        self.configparser.write(buf)
+        return buf.getvalue()
+
+    @property
     def config(self):
         return self.configsection(self.CONFIG_SECTION())
 
@@ -152,27 +171,9 @@ class SauceryBase(ABC):
 
 
 class Saucery(SauceryBase):
-    DEFAULTS = {
-        'saucery': '/saucery',
-    }
-
-    @classmethod
-    def CONFIG_SECTION(cls):
-        return 'saucery'
-
     @cached_property
-    def saucery(self):
-        path = Path(self.config['saucery'])
-        if not path.exists():
-            raise ValueError(f'Saucery location does not exist, please create it: {path}')
-        if not path.is_dir():
-            raise ValueError(f'Saucery location is not a dir, please fix: {path}')
-
-        return path
-
-    @cached_property
-    def sos(self):
-        path = self.saucery / 'sos'
+    def sosdir(self):
+        path = self.saucerydir / 'sos'
         if not path.is_dir():
             if not self.dry_run:
                 path.mkdir()
@@ -185,18 +186,18 @@ class Saucery(SauceryBase):
     @property
     def sosreports(self):
         return [self.sosreport(s)
-                for s in self.sos.iterdir()
+                for s in self.sosdir.iterdir()
                 if s.is_file() and self.SOSREPORT_REGEX.match(s.name)]
 
     def _sosreport_path(self, sosreport):
         if isinstance(sosreport, SOS):
             return sosreport.sosreport
-        return self.sos / sosreport
+        return self.sosdir / sosreport
 
     def sosreport(self, sosreport):
         path = self._sosreport_path(sosreport)
-        if not str(path.resolve()).startswith(str(self.sos.resolve())):
-            raise ValueError(f'Sosreports must be located under {self.sos}: invalid location {path}')
+        if not str(path.resolve()).startswith(str(self.sosdir.resolve())):
+            raise ValueError(f'Sosreports must be located under {self.sosdir}: invalid location {path}')
 
         if isinstance(sosreport, SOS):
             return sosreport
@@ -262,10 +263,6 @@ class BoolSOSMetaProperty(SOSMetaProperty):
 
 
 class SOS(SauceryBase):
-    @classmethod
-    def CONFIG_SECTION(cls):
-        return 'sos'
-
     @classmethod
     def check(cls, filename):
         '''Check validity of tar file.
