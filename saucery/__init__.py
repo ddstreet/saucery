@@ -181,7 +181,7 @@ class Saucery(SauceryBase):
 
     @property
     def sauceryreport(self):
-        return self.saucery / 'sauceryreport.json'
+        return self.saucerydir / 'sauceryreport.json'
 
     @property
     def sosreports(self):
