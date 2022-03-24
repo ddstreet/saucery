@@ -96,6 +96,10 @@ class Grocery(SauceryBase):
 
     def create_shelf(self, shelf):
         if not self.exists(shelf):
+            parent = str(Path(shelf).parent)
+            if parent != shelf:
+                if not self.create_shelf(parent):
+                    return False
             self.LOGGER.debug(f'mkdir: {shelf}')
             if not self.dry_run:
                 try:
