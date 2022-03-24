@@ -3,3 +3,7 @@ Description=Timer for Saucery Grocer shelf stocking
 
 [Timer]
 OnUnitInactiveSec=10min
+OnStartupSec=10min
+
+[Install]
+WantedBy=timers.target

@@ -3,3 +3,7 @@ Description=Timer for Saucery Saucier grocery shopping
 
 [Timer]
 OnUnitInactiveSec=15min
+OnStartupSec=15min
+
+[Install]
+WantedBy=timers.target
