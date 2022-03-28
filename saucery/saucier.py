@@ -48,11 +48,7 @@ class Saucier(SauceryBase):
     def buy(self, item):
         sos = self.sosreport(item)
         self.grocery.buy(item, sos)
-        for k, v in self.lookup('sosreport_meta', item=item).items():
-            try:
-                setattr(sos.meta, k, v)
-            except AttributeError:
-                self.LOGGER.error(f"Invalid meta attribute '{k}', ignoring.")
+        sos.meta_key = item
         return sos
 
     def _sosreports(self, sosreports):

@@ -27,7 +27,7 @@ def main():
                         help='Dry-run, do not perform actions (use twice to stop file logging also)')
     parser.add_argument('--max-age', help='Ignore sosreports older than this')
     parser.add_argument('-E', '--extract', action='store_true', help='Extract the sosreport')
-    parser.add_argument('-S', '--sear', action='store_true', help='Sear (run hotsos) on the sosreport')
+    parser.add_argument('-S', '--sear', action='store_true', help='Sear (process) the sosreport')
     parser.add_argument('-J', '--json', action='store_true', help='Rebuild the json index')
     action = parser.add_mutually_exclusive_group()
     action.add_argument('--dumpconfig', action='store_true', help=argparse.SUPPRESS)
