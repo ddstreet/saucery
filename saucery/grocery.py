@@ -120,6 +120,8 @@ class Grocery(SauceryBase):
         if self.create_shelf(shelf):
             if not self.dry_run:
                 self.sftp.rename(item, dest)
+            return True
+        return False
 
     def shelve(self, item, shelf, existing='rename'):
         shelf = self.manager.micromanage(shelf)
@@ -136,7 +138,7 @@ class Grocery(SauceryBase):
                 dest = rename
             else:
                 raise FileExistsError(dest)
-        self._shelve(item, shelf, dest)
+        return self._shelve(item, shelf, dest)
 
     def shelf_items(self, shelf):
         if not self.exists(shelf):
@@ -273,14 +275,14 @@ class Grocer(SauceryBase):
     def stock_item(self, item):
         shelf = self.item_shelf(Path(item).name)
         if shelf:
-            self.grocery.shelve(item, shelf, existing='rename_new')
-            self.stock_actions(item, shelf)
+            if self.grocery.shelve(item, shelf, existing='rename_new'):
+                self.stock_actions(item, shelf)
         else:
             self.grocery.shelve(item, self.grocery.discounts_shelf, existing='rename_old')
 
     def stock_actions(self, item, shelf):
         if not self.dry_run:
-            for v in self.lookup('stock_actions', item=item, shelf=shelf).values():
+            for v in self.lookup('stock_actions', {'item': item, 'shelf': shelf}).values():
                 self.LOGGER.info(v)
 
     def dispose(self):
@@ -295,7 +297,7 @@ class Grocer(SauceryBase):
         self.grocery.shelve(item, self.grocery.expired_shelf, existing='rename_new')
 
     def item_shelf(self, item):
-        shelves = self.lookup('item_shelf', item=item).values()
+        shelves = self.lookup('item_shelf', {'item': item}).values()
         if not shelves:
             return None
         shelf = str(Path('').joinpath(*shelves))
