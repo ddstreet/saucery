@@ -150,7 +150,10 @@ class SubprocessLookup(LookupBase):
     '''
     @property
     def _subprocess_timeout(self):
-        return self.get('subprocesslookup_timeout', 30)
+        try:
+            return int(self.get('subprocesslookup_timeout', None))
+        except (TypeError, ValueError):
+            return 30
 
     def _lookup_subprocess(self, key, formatmap):
         cmd = self.get(key)
