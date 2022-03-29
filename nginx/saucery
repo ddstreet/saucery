@@ -24,6 +24,11 @@ server {
         fancyindex on;
     }
 
+    location /config {
+        default_type text/plain;
+        fancyindex on;
+    }
+
     location ~ ^/sos/sosreport-[^/]+/.*(?<!/)$ {
         default_type text/plain;
         expires 96h;
