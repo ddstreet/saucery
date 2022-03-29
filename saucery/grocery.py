@@ -124,7 +124,6 @@ class Grocery(SauceryBase):
         return False
 
     def shelve(self, item, shelf, existing='rename'):
-        shelf = self.manager.micromanage(shelf)
         dest = str(Path(shelf) / Path(item).name)
         if self.exists(dest):
             rename = f'{dest}.RENAME.{time.time_ns()}'
@@ -301,6 +300,7 @@ class Grocer(SauceryBase):
         if not shelves:
             return None
         shelf = str(Path('').joinpath(*shelves))
+        shelf = self.manager.micromanage(shelf)
         return shelf if shelf != '.' else None
 
 
