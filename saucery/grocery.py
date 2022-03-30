@@ -142,7 +142,7 @@ class Grocery(SauceryBase):
     def shelf_items(self, shelf):
         if not self.exists(shelf):
             return []
-        yield from (str(Path(shelf) / item) for item in self.iterdir(shelf))
+        return [str(Path(shelf) / item) for item in self.iterdir(shelf)]
 
     def is_shelf(self, item):
         return self.size(item) is None
@@ -179,7 +179,7 @@ class Grocery(SauceryBase):
 
         This will use python regex matching for each entry in the path.
 
-        Returns an iterator of all full paths matching the 'shelves' value, or [].
+        Returns a generator of all full paths matching the 'shelves' value, or [].
         '''
         shelves = shelves or ''
         paths = shelves.lstrip('/').split('/')
@@ -216,15 +216,15 @@ class Grocery(SauceryBase):
 
     @property
     def deliveries(self):
-        yield from self.shelf_items(self.deliveries_shelf)
+        return self.shelf_items(self.deliveries_shelf)
 
     @property
     def discounts(self):
-        yield from self.shelf_items(self.discounts_shelf)
+        return self.shelf_items(self.discounts_shelf)
 
     @property
     def expired(self):
-        yield from self.shelf_items(self.expired_shelf)
+        return self.shelf_items(self.expired_shelf)
 
     def is_fresh(self, item, max_age=None):
         max_age = max_age or self.shelflife
