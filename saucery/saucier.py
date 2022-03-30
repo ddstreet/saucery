@@ -6,9 +6,9 @@ from concurrent import futures
 from functools import cached_property
 from pathlib import Path
 
-from . import SauceryBase
-from . import SOS
-from .grocery import Grocery
+from saucery.base import SauceryBase
+from saucery.sos import SOS
+from saucery.grocery import Grocery
 
 
 class Saucier(SauceryBase):

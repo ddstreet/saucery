@@ -20,7 +20,7 @@ from datetime import timedelta
 from functools import cached_property
 from pathlib import Path
 
-from . import SauceryBase
+from saucery.base import SauceryBase
 
 
 class Grocery(SauceryBase):

@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from saucery.grocery import Grocer
+from saucery import Grocer
 
 
 def main():

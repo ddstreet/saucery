@@ -8,5 +8,5 @@ setup(
         'paramiko',
         'dateparser',
     ],
-    scripts=['grocer', 'saucier'],
+    scripts=['scripts/grocer', 'scripts/saucier'],
 )
