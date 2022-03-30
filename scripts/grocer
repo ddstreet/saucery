@@ -1,66 +1,44 @@
 #!/usr/bin/python3
 
 import argparse
-import logging
 
 from saucery import Grocer
 
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--saucery', help='Location of saucery')
-    parser.add_argument('--configfile', help='Config file')
-    loglevel = parser.add_mutually_exclusive_group()
-    loglevel.add_argument('-q', '--quiet', dest='loglevel', const=logging.WARNING,
-                          action='store_const',
-                          help='Suppress info messages')
-    loglevel.add_argument('-v', '--verbose', dest='loglevel', const=logging.DEBUG,
-                          action='store_const',
-                          help='Show debug messages')
-    loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
-    parser.add_argument('--logname', help=argparse.SUPPRESS)
-    parser.add_argument('-n', '--dry-run',
-                        action='count',
-                        help='Dry-run, do not perform actions (use twice to stop file logging also)')
-    parser.add_argument('-l', '--list', action='store_true', help='Only list files')
-    action = parser.add_mutually_exclusive_group(required=True)
-    action.add_argument('--dumpconfig', action='store_true', help=argparse.SUPPRESS)
-    action.add_argument('-C', '--clean', action='store_true',
-                        help='Clean (remove) any empty shelves')
-    action.add_argument('-s', '--stock', action='store_true',
-                        help='Stock the new sosreports/files')
-    action.add_argument('-e', '--expired', action='store_true',
-                        help='Put old unknown sosreports/files in the trash')
-    opts = parser.parse_args()
-
-    logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
-    logger = logging.getLogger()
-
-    grocer = Grocer(saucery=opts.saucery,
-                    configfile=opts.configfile,
-                    dry_run=opts.dry_run,
-                    logname=opts.logname)
-
-    logger.debug(f'params: {vars(opts)}')
-
-    if opts.dumpconfig:
-        logger.info(grocer.dumpconfig())
-        return
+    actions = parser.add_mutually_exclusive_group(required=True)
+    actions.add_argument('-l', '--list', action='store_true',
+                         help='Only list files')
+    actions.add_argument('-C', '--clean', action='store_true',
+                         help='Clean (remove) any empty shelves')
+    actions.add_argument('-s', '--stock', action='store_true',
+                         help='Stock the new sosreports/files')
+    actions.add_argument('-e', '--expired', action='store_true',
+                         help='Put old unknown sosreports/files in the trash')
+    (grocer, opts) = Grocer.parse(parser=parser, actions=actions, args=args)
 
     if opts.clean:
         grocer.clean()
     elif opts.stock:
-        if opts.list:
-            for item in grocer.grocery.deliveries:
-                logger.info(item)
-        else:
-            grocer.stock()
+        grocer.stock()
     elif opts.expired:
-        if opts.list:
-            for item in grocer.grocery.discounts:
-                logger.info(item)
+        grocer.dispose()
+    elif opts.list:
+        deliveries = grocer.grocery.deliveries
+        if deliveries:
+            grocer.LOGGER.info('Deliveries:')
+            for item in deliveries:
+                grocer.LOGGER.info(item)
         else:
-            grocer.dispose()
+            grocer.LOGGER.info('No deliveries.')
+        discounts = grocer.grocery.discounts
+        if discounts:
+            grocer.LOGGER.info('Discounts:')
+            for item in discounts:
+                grocer.LOGGER.info(item)
+        else:
+            grocer.LOGGER.info('No discounts.')
 
 
 if __name__ == "__main__":

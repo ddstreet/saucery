@@ -1,55 +1,23 @@
 #!/usr/bin/python3
 
 import argparse
-import dateparser
-import logging
 
-from datetime import datetime
 
 from saucery import Saucier
 
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--saucery', help='Location of saucery')
-    parser.add_argument('--configfile', help='Config file')
-    loglevel = parser.add_mutually_exclusive_group()
-    loglevel.add_argument('-q', '--quiet', dest='loglevel', const=logging.WARNING,
-                          action='store_const',
-                          help='Suppress info messages')
-    loglevel.add_argument('-v', '--verbose', dest='loglevel', const=logging.DEBUG,
-                          action='store_const',
-                          help='Show debug messages')
-    loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
-    parser.add_argument('--logname', help=argparse.SUPPRESS)
-    parser.add_argument('-n', '--dry-run',
-                        action='count',
-                        help='Dry-run, do not perform actions (use twice to stop file logging also)')
     parser.add_argument('--max-age', help='Ignore sosreports older than this')
     parser.add_argument('-E', '--extract', action='store_true', help='Extract the sosreport')
     parser.add_argument('-S', '--sear', action='store_true', help='Sear (process) the sosreport')
     parser.add_argument('-J', '--json', action='store_true', help='Rebuild the json index')
-    action = parser.add_mutually_exclusive_group()
-    action.add_argument('--dumpconfig', action='store_true', help=argparse.SUPPRESS)
-    action.add_argument('-s', '--shop', action='store_true',
-                        help='Shop for (download) new sosreports')
-    action.add_argument('sosreport', nargs='*', default=[],
-                        help='Re-extract and/or re-sear the specified sosreport')
-    opts = parser.parse_args()
-
-    logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
-    logger = logging.getLogger()
-
-    saucier = Saucier(saucery=opts.saucery,
-                      configfile=opts.configfile,
-                      dry_run=opts.dry_run,
-                      logname=opts.logname)
-
-    logger.debug(f'params: {vars(opts)}')
-
-    if opts.dumpconfig:
-        logger.info(saucier.dumpconfig())
-        return
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument('-s', '--shop', action='store_true',
+                         help='Shop for (download) new sosreports')
+    actions.add_argument('sosreport', nargs='*', default=[],
+                         help='Re-extract and/or re-sear the specified sosreport(s)')
+    (saucier, opts) = Saucier.parse(parser=parser, actions=actions, args=args)
 
     if opts.shop:
         sosreports = [saucier.buy(s) for s in saucier.browse(max_age=opts.max_age)]

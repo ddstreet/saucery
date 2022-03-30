@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import io
 import logging
 import os
@@ -161,3 +162,42 @@ class SauceryBase(ABC):
 
     def lookup(self, section, initial_keys):
         return self.configsection(section).lookup(**initial_keys)
+
+    @classmethod
+    def parse(cls, *, parser=None, actions=None, args=None):
+        if not parser:
+            parser = argparse.ArgumentParser()
+            actions = None
+        if not actions:
+            actions = parser.add_mutually_exclusive_group()
+        actions.add_argument('--dumpconfig', action='store_true',
+                             help='Show configuration')
+        parser.add_argument('--saucery', help='Location of saucery')
+        parser.add_argument('--configfile', help='Config file')
+        parser.add_argument('-n', '--dry-run',
+                            action='count',
+                            help='Dry-run, do not perform actions (use twice to stop file logging also)')
+        loglevel = parser.add_mutually_exclusive_group()
+        loglevel.add_argument('-q', '--quiet', dest='loglevel', const=logging.WARNING,
+                              action='store_const',
+                              help='Suppress info messages')
+        loglevel.add_argument('-v', '--verbose', dest='loglevel', const=logging.DEBUG,
+                              action='store_const',
+                              help='Show debug messages')
+        loglevel.add_argument('--loglevel', help=argparse.SUPPRESS)
+        parser.add_argument('--logname', help=argparse.SUPPRESS)
+        opts = parser.parse_args(args)
+
+        logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
+
+        self = cls(saucery=opts.saucery,
+                   configfile=opts.configfile,
+                   dry_run=opts.dry_run,
+                   logname=opts.logname)
+
+        self.LOGGER.debug(f'params: {vars(opts)}')
+
+        if opts.dumpconfig:
+            self.LOGGER.info(self.dumpconfig())
+
+        return (self, opts)
