@@ -1,6 +1,11 @@
 #!/usr/bin/python3
 
 import argparse
+import os
+import sys
+
+# add our parent dir so we can find saucery module when called from git source
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from saucery import Grocer
 
