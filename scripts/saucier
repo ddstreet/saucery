@@ -17,7 +17,7 @@ def main(args=None):
     parser.add_argument('--max-age', help='Ignore sosreports older than this')
     parser.add_argument('-E', '--extract', action='store_true', help='Extract the sosreport')
     parser.add_argument('-S', '--sear', action='store_true', help='Sear (process) the sosreport')
-    parser.add_argument('-J', '--json', action='store_true', help='Rebuild the json index')
+    parser.add_argument('-M', '--menu', action='store_true', help='Update the menu with current sosreports')
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument('-s', '--shop', action='store_true',
                          help='Shop for (download) new sosreports')
@@ -37,8 +37,8 @@ def main(args=None):
         saucier.extract(sosreports, reextract=force)
     if opts.sear:
         saucier.sear(sosreports, resear=force)
-    if opts.json:
-        saucier.create_json()
+    if opts.menu:
+        saucier.update_menu()
 
 
 if __name__ == "__main__":

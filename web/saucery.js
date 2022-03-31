@@ -18,10 +18,10 @@ if (window.location.pathname.endsWith('.html')) {
     SauceryServicePath = path.slice(3).join('/');
 }
 
-var SauceryReport = [];
-var SauceryReportLoaded = $.getJSON('/sauceryreport.json', data => SauceryReport = data);
-function SauceryReportReady(callback) {
-    $.when(SauceryReportLoaded).done(callback);
+var SauceryMenu = [];
+var SauceryMenuLoaded = $.getJSON('/menu.json', data => SauceryMenu = data);
+function SauceryMenuReady(callback) {
+    $.when(SauceryMenuLoaded).done(callback);
 }
 
 // Set link to main index
@@ -76,8 +76,8 @@ function SelectSOSEntries(params={}) {
     tableFields = params.tableFields || SauceryTableFields;
     tableHeaders = params.tableHeaders || SauceryTableHeaders;
 
-    SauceryReportReady(function () {
-        let SOSEntries = SauceryReport.filter(filterfunction);
+    SauceryMenuReady(function () {
+        let SOSEntries = SauceryMenu.filter(filterfunction);
 
         anchorFields.forEach(function (field) {
             let entries = SOSEntries.filter(entry => entry[field])

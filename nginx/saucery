@@ -42,7 +42,7 @@ server {
         autoindex_format json;
     }
 
-    location = /sauceryreport.json {
+    location = /menu.json {
         add_header Cache-Control "public, no-cache";
     }
 

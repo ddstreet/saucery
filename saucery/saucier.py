@@ -81,5 +81,5 @@ class Saucier(SauceryBase):
     def sear(self, sosreports, *, parallel=True, resear=False):
         self._parallel(sosreports, 'sear', parallel=parallel, resear=resear)
 
-    def create_json(self):
-        return self.saucery.create_json()
+    def update_menu(self):
+        return self.saucery.update_menu()

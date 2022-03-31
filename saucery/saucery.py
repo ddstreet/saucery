@@ -21,8 +21,8 @@ class Saucery(SauceryBase):
         return path
 
     @property
-    def sauceryreport(self):
-        return self.saucerydir / 'sauceryreport.json'
+    def menu(self):
+        return self.saucerydir / 'menu.json'
 
     @property
     def sosreports(self):
@@ -44,14 +44,12 @@ class Saucery(SauceryBase):
             return sosreport
         return SOS(instance=self, sosreport=path)
 
-    JSON_LOCK = Lock()
-
-    def create_json(self):
-        self.LOGGER.info(f'Creating JSON index {self.sauceryreport}')
+    def update_menu(self):
+        self.LOGGER.info(f'Creating JSON index {self.menu}')
         if self.dry_run:
             return
 
-        with self.JSON_LOCK, tempfile.TemporaryDirectory(dir=self.sauceryreport.parent) as tmpdir:
-            tmpfile = Path(tmpdir) / 'tmpfile'
-            tmpfile.write_text(json.dumps([s.json for s in self.sosreports], indent=2, sort_keys=True))
-            tmpfile.rename(self.sauceryreport)
+        with tempfile.TemporaryDirectory(dir=self.menu.parent) as tmpdir:
+            tmpmenu = Path(tmpdir) / 'menu.tmp'
+            tmpmenu.write_text(json.dumps([s.json for s in self.sosreports], indent=2, sort_keys=True))
+            tmpmenu.rename(self.menu)
