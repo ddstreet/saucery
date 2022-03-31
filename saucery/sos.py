@@ -160,11 +160,6 @@ class SOS(SauceryBase):
     def workdir(self):
         return self.sosreport.parent / self.name
 
-    def create_workdir(self):
-        if not self.workdir.is_dir():
-            self.workdir.mkdir(parents=True, exist_ok=False)
-            self.workdir.chmod(0o755)
-
     meta_key = SOSMetaProperty('meta_key')
 
     @cached_property
@@ -247,7 +242,8 @@ class SOS(SauceryBase):
         if self.dry_run:
             return
 
-        self.create_workdir()
+        if not self.workdir.exists():
+            self.workdir.mkdir(parents=False, exist_ok=False)
 
         self.extracted = False
         file_list = ''
