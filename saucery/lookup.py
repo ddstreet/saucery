@@ -171,10 +171,16 @@ class SubprocessLookup(LookupBase):
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
         except subprocess.TimeoutExpired:
-            self.LOGGER.error(f'Timed out waiting for lookup cmd')
+            self.LOGGER.error(f"Timed out waiting for lookup: {' '.join(cmd)}")
+            return None
+        except FileNotFoundError:
+            self.LOGGER.error(f"Lookup command not found: {' '.join(cmd)}")
+            return None
+        except Exception:
+            self.LOGGER.exception(f'Subprocess unknown error')
             return None
         if result.returncode != 0:
-            self.LOGGER.error(f'Error running lookup cmd: {result.stderr}')
+            self.LOGGER.error(f'Error running lookup: {result.stderr}')
             return None
         return result.stdout
 
