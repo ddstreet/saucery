@@ -31,15 +31,12 @@ def main(args=None):
     else:
         sosreports = opts.sosreport or saucier.sosreports
 
-    # only force reextract/resear if specific sosreports specified
-    force = opts.force or bool(opts.sosreport)
+    saucier.cook(sosreports,
+                 force=opts.force or bool(opts.sosreport),
+                 extract=opts.extract,
+                 sear=opts.sear,
+                 update_menu=opts.menu)
 
-    if opts.extract:
-        saucier.extract(sosreports, reextract=force)
-    if opts.sear:
-        saucier.sear(sosreports, resear=force)
-    if opts.menu:
-        saucier.update_menu()
 
 
 if __name__ == "__main__":

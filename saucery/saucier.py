@@ -4,6 +4,7 @@ import os
 
 from concurrent import futures
 from functools import cached_property
+from functools import partial
 from pathlib import Path
 
 from saucery.base import SauceryBase
@@ -60,26 +61,38 @@ class Saucier(SauceryBase):
                 self.LOGGER.info(e)
         return soses
 
-    def _parallel(self, sosreports, action, parallel=True, **kwargs):
+    def _parallel(self, sosreports, action, parallel=True):
         sosreports = self._sosreports(sosreports)
-
-        run = lambda s: getattr(s, action)(**kwargs)
 
         if not parallel:
             for s in sosreports:
-                run(s)
+                action(s)
             return
 
         if parallel is True:
             parallel = len(os.sched_getaffinity(0))
         with futures.ThreadPoolExecutor(max_workers=int(parallel)) as executor:
-            executor.map(run, sosreports)
+            executor.map(action, sosreports)
 
-    def extract(self, sosreports, *, parallel=True, reextract=False):
-        self._parallel(sosreports, 'extract', parallel=parallel, reextract=reextract)
+    def _cook(self, sosreport, *, extract=False, sear=False, force=False):
+        if extract:
+            sosreport.extract(reextract=force)
+        if sear:
+            sosreport.sear(resear=force)
 
-    def sear(self, sosreports, *, parallel=True, resear=False):
-        self._parallel(sosreports, 'sear', parallel=parallel, resear=resear)
+    def cook(self, sosreports, *, extract=False, sear=False, update_menu=False, force=False, parallel=True):
+        self._parallel(sosreports,
+                       partial(self._cook, extract=extract, sear=sear, force=force),
+                       parallel=parallel)
+
+        if update_menu:
+            self.update_menu()
+
+    def extract(self, sosreports, *, parallel=False, reextract=False):
+        self.cook(sosreports, extract=True, force=reextract, parallel=parallel)
+
+    def sear(self, sosreports, *, parallel=False, resear=False):
+        self.cook(sosreports, sear=True, force=resear, parallel=parallel)
 
     def update_menu(self):
         return self.saucery.update_menu()
