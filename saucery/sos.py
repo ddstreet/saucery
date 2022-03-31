@@ -187,6 +187,9 @@ class SOS(SauceryBase):
         else:
             self.LOGGER.info(f'Searing {self.name}')
 
+        if self.dry_run:
+            return
+
         self.seared = False
         initial_keys = {
             'meta_key': self.meta_key,
