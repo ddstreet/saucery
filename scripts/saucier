@@ -37,6 +37,10 @@ def main(args=None):
                  sear=opts.sear,
                  update_menu=opts.menu)
 
+    if len(sys.argv) == 1:
+        # with no params, default to listing
+        for sosreport in sosreports:
+            print(sosreport)
 
 
 if __name__ == "__main__":
