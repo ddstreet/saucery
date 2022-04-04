@@ -36,6 +36,8 @@ var SauceryAnchorHrefFunctions = {
     'machineid': ((v, e) => '/machineid/' + v),
     'name': ((v, e) => '/sos/' + v),
     'sosreport': ((v, e) => '/sos/' + v),
+    'issues': ((v, e) => HotsosIssues(v, e)),
+    'bugs': ((v, e) => HotsosBugs(v, e)),
 }
 var SauceryAnchorTextFunctions = {
     'datetime': ((v, e) => DateToYMD(new Date(v))),
@@ -51,6 +53,8 @@ var SauceryTableHeaders = {
     'machineid': 'Machine ID',
     'datetime': 'Date',
     'name': 'SOS',
+    'issues': 'Potential Issues',
+    'bugs': 'Known Bugs',
 }
 // table column fields, in order they should be displayed
 var SauceryTableFields = Object.keys(SauceryTableHeaders);
@@ -205,4 +209,12 @@ function JoinAnchors(anchors, separatortext=', ') {
     let list = anchors.flatMap(a => [a, $('<a>').text(separatortext)]);
     list.pop();
     return list;
+}
+
+function HotsosIssues(value, element) {
+    return 'sos/' + element.name + '/hotsos.yaml'
+}
+
+function HotsosBugs(value, element) {
+    return 'sos/' + element.name + '/hotsos.yaml'
 }
