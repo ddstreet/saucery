@@ -2,19 +2,12 @@
 
 import ast
 import dateparser
-import logging
-import os
 import paramiko
 import re
-import subprocess
 import sys
 import time
 
-from abc import abstractmethod
-from configparser import ConfigParser
-from configparser import DuplicateSectionError
 from contextlib import suppress
-from copy import copy
 from datetime import datetime
 from datetime import timedelta
 from functools import cached_property
@@ -159,7 +152,8 @@ class Grocery(SauceryBase):
             newpath = path / e.filename
             if paths:
                 if self.is_shelf(e):
-                    yield from self._browse(paths[1:], paths[0], path=newpath, browse_items=browse_items)
+                    yield from self._browse(paths[1:], paths[0],
+                                            path=newpath, browse_items=browse_items)
             else:
                 if self.is_item(e) == browse_items:
                     self.LOGGER.debug(f'Browsed to {newpath}')
@@ -287,10 +281,12 @@ class Grocer(SauceryBase):
     def dispose(self):
         for item in self.grocery.discounts:
             if not self.grocery.is_fresh(item):
-                self.LOGGER.info(f'Disposing of expired file {item} with age {self.grocery.age(item)}')
+                self.LOGGER.info(f'Disposing of expired file {item} '
+                                 f'with age {self.grocery.age(item)}')
                 self.dispose_item(item)
             else:
-                self.LOGGER.debug(f'Leaving unexpired file {item} with age {self.grocery.age(item)}')
+                self.LOGGER.debug(f'Leaving unexpired file {item} '
+                                  f'with age {self.grocery.age(item)}')
 
     def dispose_item(self, item):
         self.grocery.shelve(item, self.grocery.expired_shelf, existing='rename_new')

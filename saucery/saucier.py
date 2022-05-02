@@ -9,7 +9,6 @@ from pathlib import Path
 
 from saucery.base import SauceryBase
 from saucery.sos import SOS
-from saucery.grocery import Grocery
 
 
 class Saucier(SauceryBase):
@@ -80,7 +79,9 @@ class Saucier(SauceryBase):
         if sear:
             sosreport.sear(resear=force)
 
-    def cook(self, sosreports, *, extract=False, sear=False, update_menu=False, force=False, parallel=True):
+    def cook(self, sosreports, *,
+             extract=False, sear=False, update_menu=False,
+             force=False, parallel=True):
         self._parallel(sosreports,
                        partial(self._cook, extract=extract, sear=sear, force=force),
                        parallel=parallel)

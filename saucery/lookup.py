@@ -70,10 +70,10 @@ class LookupBase(UserDict):
         failure, returns {}.
         '''
         if not self.lookup_order:
-            self.LOGGER.debug(f'missing lookup_order')
+            self.LOGGER.debug('missing lookup_order')
             return {}
         if not self.lookup_keys:
-            self.LOGGER.debug(f'missing lookup_keys')
+            self.LOGGER.debug('missing lookup_keys')
             return {}
         fmtmap = {**kwargs}
         for key in self.lookup_order:
@@ -177,7 +177,7 @@ class SubprocessLookup(LookupBase):
             self.LOGGER.error(f"Lookup command not found: {' '.join(cmd)}")
             return None
         except Exception:
-            self.LOGGER.exception(f'Subprocess unknown error')
+            self.LOGGER.exception('Subprocess unknown error')
             return None
         if result.returncode != 0:
             self.LOGGER.error(f'Error running lookup: {result.stderr}')

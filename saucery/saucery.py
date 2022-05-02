@@ -5,7 +5,6 @@ import tempfile
 
 from functools import cached_property
 from pathlib import Path
-from threading import Lock
 
 from saucery.base import SauceryBase
 from saucery.sos import SOS
@@ -38,7 +37,8 @@ class Saucery(SauceryBase):
     def sosreport(self, sosreport):
         path = self._sosreport_path(sosreport)
         if not str(path.resolve()).startswith(str(self.sosdir.resolve())):
-            raise ValueError(f'Sosreports must be located under {self.sosdir}: invalid location {path}')
+            raise ValueError(f'Sosreports must be located under {self.sosdir}: '
+                             f'invalid location {path}')
 
         if isinstance(sosreport, SOS):
             return sosreport
@@ -51,5 +51,6 @@ class Saucery(SauceryBase):
 
         with tempfile.TemporaryDirectory(dir=self.menu.parent) as tmpdir:
             tmpmenu = Path(tmpdir) / 'menu.tmp'
-            tmpmenu.write_text(json.dumps([s.json for s in self.sosreports], indent=2, sort_keys=True))
+            tmpmenu.write_text(json.dumps([s.json for s in self.sosreports],
+                                          indent=2, sort_keys=True))
             tmpmenu.rename(self.menu)

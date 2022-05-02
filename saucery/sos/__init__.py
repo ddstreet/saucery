@@ -35,7 +35,7 @@ class SOS(SauceryBase):
                     if name.startswith('/') or name.startswith('..') or '/../' in name:
                         raise ValueError(f'Invalid tar member: {name}')
         except EOFError:
-            raise ValueError(f'Invalid/corrupt tarfile')
+            raise ValueError('Invalid/corrupt tarfile')
 
     def __init__(self, *args, sosreport, **kwargs):
         super().__init__(*args, **kwargs)
@@ -83,7 +83,7 @@ class SOS(SauceryBase):
 
     def sear(self, resear=False):
         if not self.filesdir.exists() or not self.extracted:
-            self.LOGGER.error(f"Not extracted, can't sear sosreport {self.name}")
+            self.LOGGER.error(f"Not extracted, can't sear: {self.name}")
             return
 
         if not self.case:
@@ -92,7 +92,7 @@ class SOS(SauceryBase):
                 self.LOGGER.info(f'Setting case to {filename_case} based on filename: {self.name}')
                 self.case = filename_case
             else:
-                self.LOGGER.error(f"Can't sear, case not set and could detect from filename: {self.name}")
+                self.LOGGER.error(f"Case unset and not in filename, can't sear: {self.name}")
                 return
 
         if self.seared:
@@ -190,9 +190,9 @@ class SOS(SauceryBase):
                         (Path(tmpdir) / m.name).chmod(mode)
                 topfiles = list(Path(tmpdir).iterdir())
                 if len(topfiles) == 0:
-                    raise ValueError(f'No files found in sosreport')
+                    raise ValueError(f'No files found in sosreport: {self.name}')
                 if len(topfiles) > 1:
-                    raise ValueError(f'sosreport contains multiple top-level directories')
+                    raise ValueError(f'sosreport contains multiple top-level dirs: {tmpdir}')
                 # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
                 topfiles[0].rename(self.filesdir)
         except Exception as e:
@@ -202,7 +202,7 @@ class SOS(SauceryBase):
             self.file_list = file_list
             self.file_count = file_count
             self.total_size = total_size
-        self.LOGGER.debug(f'Extracted {self.file_count} members for {self.total_size} bytes: {self.filesdir}')
+        self.LOGGER.debug(f'Extracted {file_count} members ({total_size} bytes): {self.filesdir}')
         self.extracted = True
 
     @property

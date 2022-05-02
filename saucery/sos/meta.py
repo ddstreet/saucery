@@ -59,16 +59,18 @@ class BoolSOSMetaProperty(SOSMetaProperty):
         super().__init__(name, valuetype=lambda v: v == 'True', **kwargs)
 
     def strvalue(self, value):
-        return str(value == True)
+        return str(value is True)
 
 
 class SOSMetaDict(MutableMapping):
     def __init__(self, sos, keys):
         super().__init__()
         self._keys = copy(keys)
+
         class SOSMeta():
             dry_run = sos.dry_run
             workdir = sos.workdir
+
         for k in keys:
             setattr(SOSMeta, k, SOSMetaProperty(k))
         self.meta = SOSMeta()

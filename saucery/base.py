@@ -24,7 +24,7 @@ from .lookup import ConfigLookup
 class SauceryBase(ABC):
     LOGGER = logging.getLogger(__name__)
     SOSREPORT_REGEX = re.compile(r'(?i)'
-                                 r'(?P<name>sosreport-(?P<hostname>.+?)(?:-(?P<case>\d+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<hash>\w{7}))?)'
+                                 r'(?P<name>sosreport-(?P<hostname>.+?)(?:-(?P<case>\d+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<hash>\w{7}))?)' # noqa
                                  r'\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
     DEFAULT_SAUCERY_DIR = '/saucery'
     DEFAULT_CONFIG_FILE = 'saucery.conf'
@@ -64,8 +64,11 @@ class SauceryBase(ABC):
 
     @property
     def configfiles(self):
-        usercfgdir = Path(os.getenv('XDG_CONFIG_HOME', '~/.config')).expanduser().resolve() / 'saucery'
-        files = [Path(f).expanduser() for f in [self.DEFAULT_CONFIG_FILE, self.kwargs.get('configfile')] if f]
+        xdg_config_home = os.getenv('XDG_CONFIG_HOME', '~/.config')
+        usercfgdir = Path(xdg_config_home).expanduser().resolve() / 'saucery'
+        files = [Path(f).expanduser()
+                 for f in [self.DEFAULT_CONFIG_FILE, self.kwargs.get('configfile')]
+                 if f]
         dirs = [self.saucerydir / 'config', usercfgdir]
         return [d / f for d in dirs for f in files]
 
@@ -74,6 +77,7 @@ class SauceryBase(ABC):
         return self.kwargs.get('dry_run', False)
 
     LOGGED_DRY_RUN = False
+
     def log_dry_run(self):
         if SauceryBase.LOGGED_DRY_RUN:
             return
@@ -87,6 +91,7 @@ class SauceryBase(ABC):
             self.LOGGER.info(msg)
 
     LOGGING_SETUP = False
+
     def setup_logging(self):
         if SauceryBase.LOGGING_SETUP:
             return
@@ -178,7 +183,8 @@ class SauceryBase(ABC):
         parser.add_argument('--configfile', help='Config file')
         parser.add_argument('-n', '--dry-run',
                             action='count',
-                            help='Dry-run, do not perform actions (use twice to stop file logging also)')
+                            help=('Dry-run, do not perform actions '
+                                  '(use twice to stop file logging also)'))
         loglevel = parser.add_mutually_exclusive_group()
         loglevel.add_argument('-q', '--quiet', dest='loglevel', const=logging.WARNING,
                               action='store_const',

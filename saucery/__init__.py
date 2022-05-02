@@ -8,7 +8,7 @@ from .sos import SOS
 __all__ = [
     'Grocer',
     'Grocery',
-    'Sacuery',
+    'Saucery',
     'Saucier',
     'SOS'
 ]
