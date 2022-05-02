@@ -49,7 +49,7 @@ class Saucier(SauceryBase):
     def buy(self, item):
         sos = self.sosreport(item)
         self.grocery.buy(item, sos)
-        sos.meta_key = item
+        sos.case = self.lookup('sosreport_case', {'path': item}).get('case')
         return sos
 
     def _sosreports(self, sosreports):

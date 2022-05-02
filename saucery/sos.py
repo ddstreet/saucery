@@ -160,7 +160,7 @@ class SOS(SauceryBase):
     def workdir(self):
         return self.sosreport.parent / self.name
 
-    meta_key = SOSMetaProperty('meta_key')
+    case = SOSMetaProperty('case')
 
     @cached_property
     def meta(self):
@@ -172,10 +172,6 @@ class SOS(SauceryBase):
     def sear(self, resear=False):
         if not self.filesdir.exists() or not self.extracted:
             self.LOGGER.error(f"Not extracted, can't sear sosreport {self.name}")
-            return
-
-        if not self.meta_key:
-            self.LOGGER.error(f"No meta key, can't sear sosreport {self.name}")
             return
 
         if self.seared:
@@ -192,7 +188,7 @@ class SOS(SauceryBase):
 
         self.seared = False
         initial_keys = {
-            'meta_key': self.meta_key,
+            'case': self.case,
             'sosreport_files': str(self.filesdir),
         }
         for k, v in self.lookup('sosreport_meta', initial_keys).items():
@@ -319,5 +315,6 @@ class SOS(SauceryBase):
             'datetime': self.isodate,
             'hostname': self.hostname,
             'machineid': self.machineid,
+            'case': self.case,
             **self.meta,
         }
