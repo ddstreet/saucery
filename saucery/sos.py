@@ -200,9 +200,14 @@ class SOS(SauceryBase):
             'case': self.case,
             'sosreport_files': str(self.filesdir),
         }
-        for k, v in self.lookup('sosreport_meta', initial_keys).items():
-            self.meta[k] = v
-        self.seared = True
+        sosreport_meta = self.lookup('sosreport_meta', initial_keys)
+        if sosreport_meta:
+            for k, v in sosreport_meta.items():
+                self.meta[k] = v
+            self.LOGGER.debug(f'Finished searing: {self.name}')
+            self.seared = True
+        else:
+            self.LOGGER.error(f'Failed to sear: {self.name}')
 
     @property
     def filesdir(self):
