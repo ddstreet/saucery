@@ -174,6 +174,15 @@ class SOS(SauceryBase):
             self.LOGGER.error(f"Not extracted, can't sear sosreport {self.name}")
             return
 
+        if not self.case:
+            filename_case = self._sosreport_match.group('case')
+            if filename_case:
+                self.LOGGER.info(f'Setting case to {filename_case} based on filename: {self.name}')
+                self.case = filename_case
+            else:
+                self.LOGGER.error(f"Can't sear, case not set and could detect from filename: {self.name}")
+                return
+
         if self.seared:
             if resear:
                 self.LOGGER.info(f'Re-searing {self.name}')

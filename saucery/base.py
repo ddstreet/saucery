@@ -23,7 +23,9 @@ from .lookup import ConfigLookup
 
 class SauceryBase(ABC):
     LOGGER = logging.getLogger(__name__)
-    SOSREPORT_REGEX = re.compile(r'(?i)(?P<name>sosreport-.*)\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
+    SOSREPORT_REGEX = re.compile(r'(?i)'
+                                 r'(?P<name>sosreport-(?P<hostname>.+?)(?:-(?P<case>\d+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<hash>\w{7}))?)'
+                                 r'\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
     DEFAULT_SAUCERY_DIR = '/saucery'
     DEFAULT_CONFIG_FILE = 'saucery.conf'
     DEFAULTS = {}
