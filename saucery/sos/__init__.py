@@ -5,9 +5,11 @@ import subprocess
 import tarfile
 import tempfile
 
+from collections import ChainMap
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
+from types import MappingProxyType
 
 from saucery.base import SauceryBase
 from saucery.sos.meta import SOSMetaDict
@@ -40,6 +42,8 @@ class SOS(SauceryBase):
     def __init__(self, *args, sosreport, **kwargs):
         super().__init__(*args, **kwargs)
         self._sosreport = sosreport
+        self._references = {}
+        self._analyses = {}
 
         # Require sanely named sosreport
         self._sosreport_match = self.SOSREPORT_REGEX.match(self.sosreport.name)
@@ -244,3 +248,20 @@ class SOS(SauceryBase):
             'case': self.case,
             **self.meta,
         }
+
+    @cached_property
+    def references(self):
+        return MappingProxyType(self._references)
+
+    @cached_property
+    def analyses(self):
+        return MappingProxyType(self._analyses)
+
+    @property
+    def conclusions(self):
+        return {name: analysis.conclusion
+                for name, analysis in self.analyses.items()}
+
+    @cached_property
+    def definitions(self):
+        return ChainMap(self.references, self.analyses)
