@@ -1,0 +1,30 @@
+- type: command
+  name: ceph_crush_dump
+  command: ceph_mon
+  source: ceph_osd_crush_dump
+- type: jq
+  name: ceph_crush_buckets
+  source: ceph_crush_dump
+  jq: '.buckets | until(map(..|.items?|.[]?|select(has("name")|not)|.id < 0)|any|not; . as $ids | (..|.items?|.[]?|select(.id < 0)) |= (.id as $id|$ids|.[]|select(.id == $id)))'
+- type: jq
+  name: ceph_crush_mixed_type_buckets
+  source: ceph_crush_buckets
+  jq: '[(.[]|.items|select(map(select(.id < 0))|length>0)|map(.id)) as $ids | map(.id as $id|select($ids|index($id))|.type_id)|unique|length == 1]|all'
+- type: jq
+  name: ceph_crush_rule_bucket_env
+  source: ceph_crush_dump
+  raw: true
+  jq: '{BUCKET: .rules|map(.steps|{id: (map(select(.op == "take"))|.[].item), fd: (map(select(has("type"))) | .[].type)})|tostring}|tostring'
+- type: jq
+  name: ceph_crush_unequal_buckets
+  source: ceph_crush_buckets
+  env: ceph_crush_rule_bucket_env
+  jq: '[(env.BUCKET|fromjson[]) as $bucket | [.[]|select(.id == $bucket.id)|..|select(has("items")?)|.items|map(select(has("type_name")))|map(select(.type_name == $bucket.fd))|map(.weight)]|flatten|unique|length == 1]|all'
+- type: eq
+  name: ceph_crush_mixed_type_analysis
+  source: ceph_crush_mixed_type_buckets
+  to: 'true'
+- type: eq
+  name: ceph_crush_unequal_analysis
+  source: ceph_crush_unequal_buckets
+  to: 'true'

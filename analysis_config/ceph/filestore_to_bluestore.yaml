@@ -1,0 +1,10 @@
+- type: inisection
+  source: /etc/ceph/ceph.conf
+  section: global
+  name: ceph_global
+- type: dictfieldeq
+  name: ceph_osd_journal_check
+  field: osd journal
+  to: ''
+  source: ceph_global
+  description: Ceph Bluestore is enabled but there is a journal device configured in ceph.conf

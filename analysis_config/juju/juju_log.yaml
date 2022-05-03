@@ -1,0 +1,21 @@
+- type: file
+  name: juju_log
+  source: /var/log/juju/*.log
+- type: regex
+  name: lp1910958
+  source: juju_log
+  regex: '.* manifold worker .+ error: failed to initialize uniter for "(\S+)": cannot create relation state tracker: cannot remove persisted state, relation (\d+) has members'
+  description: Unit {} failed to start due to members in relation {} that cannot be removed
+- type: regex
+  name: lp1948906
+  source: juju_log
+  regex: '.* manifold worker .+ error: executing operation \"run post-series-upgrade hook\" for (\S+): upgrade series status \"complete running\"'
+  description: post-series-upgrade failed, issues with unit {} - see LP bug for workaround
+- type: regex
+  name: lp1852502
+  source: journalctl
+  regex: '.* CappedPositionLost: CollectionScan died due to position in capped collection being deleted'
+  description: >-
+    known mongodb bug identified - https://jira.mongodb.org/browse/TOOLS-1636
+    Workaround is to pass --no-logs to juju create-backup. This is an issue only with
+    Mongo 3. Mongo 4 does not have this issue. Upstream is working on migrating to Mongo 4 in the Juju 3.0 release.

@@ -1,0 +1,19 @@
+- name: cmdline
+  source: /proc/cmdline
+  type: file
+- chain:
+  - type: split
+  - type: indirectdict
+  - field: panic
+    type: dictfield
+  name: panic
+  source: cmdline
+  type: chain
+- description: The world is ending, bye!
+  level: '1'
+  name: ispanic
+  source: panic
+  summary: let's panic!
+  to: '-1'
+  type: eq
+

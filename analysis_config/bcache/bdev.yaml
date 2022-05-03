@@ -1,0 +1,27 @@
+- absolute: 'true'
+  directory: 'true'
+  listlinks: 'true'
+  name: bdevs
+  source: /sys/fs/bcache/*/bdev*
+  type: ls
+- as:
+    type: subdirfiledict
+    source: '*'
+  name: bdev_dicts
+  source: bdevs
+  type: foreach
+  field: subdir
+- as:
+    and:
+    - to:
+        sequential_cutoff: 0.0k
+        cache_mode: writethrough [writeback] writearound none
+      type: dicteq
+    - to:
+        writeback_percent: 10
+      type: dictge
+    type: and
+  name: bdev_config
+  source: bdev_dicts
+  type: foreachanalysis
+
