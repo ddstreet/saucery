@@ -1,5 +1,6 @@
 
 import json
+import logging
 import yaml
 
 from collections import ChainMap
@@ -13,16 +14,21 @@ from .definition import Definition
 from .reference import Reference
 
 
+LOGGER = logging.Logger(__name__)
+
+
 class Reductions(UserDict):
-    def __init__(self, sos, location, *, verbose=False):
+    def __init__(self, sos, location):
         super().__init__()
         self.sos = sos
-        self.location = Path(location).expanduser().resolve()
         self.verbose = verbose
         self._references = {}
         self._analyses = {}
         self.data = ChainMap(self._references, self._analyses)
-        self._load()
+        if not location:
+            LOGGER.error('No location provided for Reductions')
+        else:
+            self._load(Path(location).expanduser().resolve())
 
     def __setitem__(self, key, value):
         if not value:
@@ -46,16 +52,13 @@ class Reductions(UserDict):
                 return
         raise KeyError(key)
 
-    def _load(self):
-        self._load_files(self.location.rglob('*.[yY][aA][mM][lL]'))
-        self._load_files(self.location.rglob('*.[jJ][sS][oO][nN]'))
+    def _load(self, location):
+        self._load_files(location.rglob('*.[yY][aA][mM][lL]'))
+        self._load_files(location.rglob('*.[jJ][sS][oO][nN]'))
 
     def _load_files(self, files):
         for f in files:
-            path = self.location / f
-            if not str(path.resolve()).startswith(str(self.location)):
-                continue
-            self._load_definitions(path)
+            self._load_definitions(Path(f))
 
     def _load_definitions(self, path):
         filetype = path.suffix.lstrip('.').lower()
