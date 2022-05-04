@@ -37,9 +37,6 @@ class Analysis(Definition):
                          'summary': cls._field('text', default='')},
                         super().fields())
 
-    def _sos_dict(self):
-        return self.sos._analyses
-
     def setup(self):
         super().setup()
         # verify level is valid

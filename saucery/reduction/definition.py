@@ -34,14 +34,14 @@ class Definition(ABC, UserDict):
         return None
 
     @classmethod
-    def __new__(cls, definition, sos, *args, **kwargs):
+    def __new__(cls, definition, *args, **kwargs):
         classtype = definition.get('type')
         if not classtype:
             raise InvalidDefinitionError(f"invalid definition, missing 'type': {definition}")
         subclass = cls.IMPLEMENTATIONS.get(classtype)
         if not subclass:
             raise InvalidDefinitionError(f"Invalid definition, unknown 'type': {classtype}")
-        return super().__new__(subclass, definition, sos, *args, **kwargs)
+        return super().__new__(subclass, definition, *args, **kwargs)
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
@@ -60,10 +60,10 @@ class Definition(ABC, UserDict):
             'source': cls._field(['text', 'list', 'dict']),
         }
 
-    def __init__(self, definition, sos, *, anonymous=False):
+    def __init__(self, definition, reductions, *, anonymous=False):
         '''Definition init.
 
-        This requires the definition dict and the SOS instance we belong to.
+        This requires the definition dict and the SOS reductions we belong to.
 
         The 'anonymous' param may be set to True if this Definition will be used
         privately by another definition, in which case our 'name' will be generated
@@ -73,20 +73,14 @@ class Definition(ABC, UserDict):
         if anonymous:
             self['name'] = str(uuid.uuid4())
 
-        self._sos = sos
-        if self.name in self.sos.definitions:
-            raise InvalidDefinitionError(f"Duplicate definition with name '{self.name}'")
-        self._sos_dict[self.name] = self
+        self._reductions = reductions
+        reductions[self.name] = self
 
         self.setup()
 
-    @abstractmethod
-    def _sos_dict(self):
-        pass
-
     @property
     def sos(self):
-        return self._sos
+        return self._reductions.sos
 
     @property
     def name(self):
@@ -112,7 +106,7 @@ class Definition(ABC, UserDict):
         return yaml.dump(self.data)
 
     def anonymous(self, definition, *args, **kwargs):
-        return Definition(definition, self.sos, anonymous=True, *args, **kwargs)
+        return Definition(definition, self._reductions, anonymous=True, *args, **kwargs)
 
     def __repr__(self):
         return self.json

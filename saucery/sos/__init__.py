@@ -12,6 +12,7 @@ from pathlib import Path
 from types import MappingProxyType
 
 from saucery.base import SauceryBase
+from saucery.reduction import Reductions
 from saucery.sos.meta import SOSMetaDict
 from saucery.sos.meta import SOSMetaProperty
 
@@ -42,8 +43,6 @@ class SOS(SauceryBase):
     def __init__(self, *args, sosreport, **kwargs):
         super().__init__(*args, **kwargs)
         self._sosreport = sosreport
-        self._references = {}
-        self._analyses = {}
 
         # Require sanely named sosreport
         self._sosreport_match = self.SOSREPORT_REGEX.match(self.sosreport.name)
@@ -250,18 +249,5 @@ class SOS(SauceryBase):
         }
 
     @cached_property
-    def references(self):
-        return MappingProxyType(self._references)
-
-    @cached_property
-    def analyses(self):
-        return MappingProxyType(self._analyses)
-
-    @property
-    def conclusions(self):
-        return {name: analysis.conclusion
-                for name, analysis in self.analyses.items()}
-
-    @cached_property
-    def definitions(self):
-        return ChainMap(self.references, self.analyses)
+    def reductions(self):
+        return Reductions(self)

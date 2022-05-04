@@ -45,9 +45,6 @@ class Reference(Config):
             return value.decode(**params)
         return value.encode(**params)
 
-    def _sos_dict(self):
-        return self.sos._references
-
     @property
     def _value_conversion_kwargs(self):
         return {}
