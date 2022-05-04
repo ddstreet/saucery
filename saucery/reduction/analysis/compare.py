@@ -10,10 +10,10 @@ from contextlib import suppress
 from functools import cached_property
 from functools import lru_cache
 
-from .config import InvalidConfigError
+from .definition import InvalidDefintionError
 
 
-class InvalidComparisonError(InvalidConfigError):
+class InvalidComparisonError(InvalidDefinitionError):
     pass
 
 

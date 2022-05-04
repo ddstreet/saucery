@@ -8,6 +8,9 @@ from contextlib import suppress
 from copy import copy
 from functools import cached_property
 
+from saucery.reduction.definition import Definition
+from saucery.reduction.definition import InvalidDefinitionError
+
 from .compare import DictComparison
 from .compare import NumberGeComparison
 from .compare import NumberGtComparison
@@ -15,8 +18,12 @@ from .compare import NumberLeComparison
 from .compare import NumberLtComparison
 from .compare import StringEqComparison
 from .conclusion import Conclusion
-from saucery.reference.definition import Definition
-from saucery.reference.definition import InvalidDefinitionError
+
+
+__all__ = [
+    'InvalidAnalysisError',
+    'Analysis',
+]
 
 
 class InvalidAnalysisError(InvalidDefinitionError):

@@ -9,15 +9,21 @@ from functools import cached_property
 from itertools import chain
 from pathlib import Path
 
-from .config import Config
-from .config import InvalidConfigError
+from saucery.reduction.definition import Definition
+from saucery.reduction.definition import InvalidDefinitionError
 
 
-class InvalidReferenceError(InvalidConfigError):
+__all__ = [
+    'InvalidReferenceError',
+    'Reference',
+]
+
+
+class InvalidReferenceError(InvalidDefinitionError):
     pass
 
 
-class Reference(Config):
+class Reference(Definition):
     '''Reference object.
 
     This represents a reference to an entry inside the SOS.
