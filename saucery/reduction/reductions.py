@@ -5,8 +5,9 @@ import yaml
 
 from collections import ChainMap
 from collections import UserDict
-from functools import singledispatchmethod
+from functools import cached_property
 from pathlib import Path
+from types import MappingProxyType
 
 from .analysis import Analysis
 from .definition import InvalidDefinitionError
@@ -21,14 +22,21 @@ class Reductions(UserDict):
     def __init__(self, sos, location):
         super().__init__()
         self.sos = sos
-        self.verbose = verbose
-        self._references = {}
         self._analyses = {}
+        self._references = {}
         self.data = ChainMap(self._references, self._analyses)
         if not location:
             LOGGER.error('No location provided for Reductions')
         else:
             self._load(Path(location).expanduser().resolve())
+
+    @property
+    def analyses(self):
+        return self._analyses.values()
+
+    @property
+    def references(self):
+        return self._references.values()
 
     def __setitem__(self, key, value):
         if not value:
@@ -53,24 +61,16 @@ class Reductions(UserDict):
         raise KeyError(key)
 
     def _load(self, location):
-        self._load_files(location.rglob('*.[yY][aA][mM][lL]'))
-        self._load_files(location.rglob('*.[jJ][sS][oO][nN]'))
+        for f in location.rglob('*.[jJ][sS][oO][nN]'):
+            self._load_json(f)
+        for f in location.rglob('*.[yY][aA][mM][lL]'):
+            self._load_yaml(f)
 
-    def _load_files(self, files):
-        for f in files:
-            self._load_definitions(Path(f))
+    def _load_json(self, path):
+        self._add_definitions(json.loads(path.read_text()))
 
-    def _load_definitions(self, path):
-        filetype = path.suffix.lstrip('.').lower()
-        if filetype == 'yaml':
-            definitions = yaml.safe_load(path.read_text())
-        elif filetype == 'json':
-            definitions = json.loads(path.read_text())
-        else:
-            if self.verbose:
-                print(f"Ignoring unknown file type '{filetype}': {path}")
-            return
-        self._add_definitions(definitions)
+    def _load_yaml(self, path):
+        self._add_definitions(yaml.safe_load(path.read_text()))
 
     def _add_definitions(self, definitions):
         if isinstance(definitions, list):

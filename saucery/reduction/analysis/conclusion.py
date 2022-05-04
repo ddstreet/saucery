@@ -17,6 +17,7 @@ class Conclusion(object):
             'summary': self.analysis.summary,
             'description': self.analysis.description,
             'result': self.analysis.result,
+            'normal': self.normal,
         }
 
     @property
