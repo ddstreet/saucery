@@ -10,7 +10,7 @@ from contextlib import suppress
 from functools import cached_property
 from functools import lru_cache
 
-from .definition import InvalidDefintionError
+from saucery.reduction.definition import InvalidDefinitionError
 
 
 class InvalidComparisonError(InvalidDefinitionError):
