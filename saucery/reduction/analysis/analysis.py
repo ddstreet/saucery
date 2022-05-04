@@ -106,7 +106,7 @@ class Analysis(Definition):
         pass
 
     def source_reference(self, source=None):
-        return self.references.get(source or self.source)
+        return self._reductions.get(source or self.source)
 
     def source_dict(self, source=None):
         try:

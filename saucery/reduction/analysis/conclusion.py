@@ -1,4 +1,6 @@
 
+import json
+
 from functools import cached_property
 
 
@@ -26,7 +28,7 @@ class Conclusion(object):
         return self.analysis.normal
 
     def __repr__(self):
-        return self.analysis.hotsos.dump(self.data)
+        return json.dumps(self.data)
 
     def __bool__(self):
         # Note that we are only True if our result is *not* normal,

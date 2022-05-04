@@ -28,7 +28,7 @@ class IndirectReference(Reference):
                         super().fields())
 
     def source_reference(self, source=None):
-        return self.references.get(source or self.source)
+        return self._reductions.get(source or self.source)
 
     def _source_attr(self, attr, source=None):
         return getattr(self.source_reference(source), attr, None)

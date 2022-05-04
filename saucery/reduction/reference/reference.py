@@ -137,7 +137,7 @@ class FileReference(Reference):
         return cls.decompress(path, content)
 
     def _relative_sospath(self, path):
-        return str(Path('/') / path.relative_to(self.sospath))
+        return str(Path('/') / path.relative_to(self.sos.filesdir))
 
     @property
     def _subdir(self):
@@ -145,7 +145,7 @@ class FileReference(Reference):
 
     @cached_property
     def basepath(self):
-        return self.sospath / self._source(self._subdir)
+        return self.sos.filesdir / self._source(self._subdir)
 
     def _source(self, source):
         return str(source).lstrip('/')
