@@ -250,4 +250,8 @@ class SOS(SauceryBase):
 
     @cached_property
     def reductions(self):
-        return Reductions(self)
+        location = self.config.get('reductions')
+        if not location:
+            self.LOGGER.error('No location configured for reduction definitions')
+            return {}
+        return Reductions(self, location)

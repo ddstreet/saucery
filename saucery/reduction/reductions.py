@@ -1,13 +1,15 @@
 
-import glob
 import json
 import yaml
 
 from collections import ChainMap
 from collections import UserDict
 from functools import singledispatchmethod
+from pathlib import Path
 
 from .analysis import Analysis
+from .definition import InvalidDefinitionError
+from .definition import Definition
 from .reference import Reference
 
 
@@ -29,9 +31,9 @@ class Reductions(UserDict):
         if key in self:
             raise InvalidDefinitionError(f'Duplicate definition with name {key}')
 
-        if isinstance(cls, Reference):
+        if isinstance(value, Reference):
             clsdict = self._references
-        elif isinstance(cls, Analysis):
+        elif isinstance(value, Analysis):
             clsdict = self._analyses
         else:
             raise InvalidDefinitionError(f'Unknown definition class: {value.__class__}')
@@ -45,10 +47,8 @@ class Reductions(UserDict):
         raise KeyError(key)
 
     def _load(self):
-        self._load_files(glob.iglob('**/*.[yY][aA][mM][lL]',
-                                    root_dir=self.location, recursive=True))
-        self._load_files(glob.iglob('**/*.[jJ][sS][oO][nN]',
-                                    root_dir=self.location, recursive=True))
+        self._load_files(self.location.rglob('*.[yY][aA][mM][lL]'))
+        self._load_files(self.location.rglob('*.[jJ][sS][oO][nN]'))
 
     def _load_files(self, files):
         for f in files:
@@ -74,6 +74,6 @@ class Reductions(UserDict):
             for d in definitions:
                 self._add_definitions(d)
         elif isinstance(definitions, dict):
-            Definition(definitions, self.sos)
+            Definition(definitions, self)
         else:
             raise InvalidDefinitionError(f'Unknown definition format: {definitions}')

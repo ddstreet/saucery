@@ -1,5 +1,7 @@
 
+import json
 import uuid
+import yaml
 
 from abc import ABC
 from abc import abstractmethod
@@ -33,7 +35,7 @@ class Definition(ABC, UserDict):
     def TYPE(cls):
         return None
 
-    @classmethod
+    @staticmethod
     def __new__(cls, definition, *args, **kwargs):
         classtype = definition.get('type')
         if not classtype:
@@ -41,7 +43,7 @@ class Definition(ABC, UserDict):
         subclass = cls.IMPLEMENTATIONS.get(classtype)
         if not subclass:
             raise InvalidDefinitionError(f"Invalid definition, unknown 'type': {classtype}")
-        return super().__new__(subclass, definition, *args, **kwargs)
+        return super().__new__(subclass)
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
