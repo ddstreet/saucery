@@ -1,4 +1,7 @@
 
+import json
+import yaml
+
 from collections import ChainMap
 from copy import copy
 from functools import cached_property
@@ -163,3 +166,29 @@ class ForeachReference(IndirectReference):
     @cached_property
     def value(self):
         return '\n'.join([r.get('name') for r in self.anonymous_references()]) or None
+
+
+class Yaml2JsonReference(IndirectReference):
+    @classmethod
+    def TYPE(cls):
+        return 'yaml2json'
+
+    @cached_property
+    def value(self):
+        v = super().value
+        if v is None:
+            return v
+        return json.dumps(yaml.safe_load(v))
+
+
+class Json2YamlReference(IndirectReference):
+    @classmethod
+    def TYPE(cls):
+        return 'json2yaml'
+
+    @cached_property
+    def value(self):
+        v = super().value
+        if v is None:
+            return v
+        return yaml.dump(json.loads(v))

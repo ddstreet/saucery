@@ -223,3 +223,19 @@ class CommandReference(FileReference):
     @property
     def _subdir(self):
         return str(Path('/sos_commands') / self.get('command'))
+
+
+class SOSMetaReference(Reference):
+    '''SOSMetaReference object.
+
+    This represents a reference to a 'meta' property of the SOS instance.
+
+    This gets the value of self.sos.meta.get(source) or None.
+    '''
+    @classmethod
+    def TYPE(cls):
+        return 'sosmeta'
+
+    @property
+    def value(self):
+        return self.sos.meta.get(self.source)
