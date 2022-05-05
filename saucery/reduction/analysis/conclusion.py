@@ -1,24 +1,18 @@
 
-import json
 
-from functools import cached_property
-
-
-class Conclusion(object):
+class Conclusion(dict):
     def __init__(self, analysis):
-        super().__init__()
         self._analysis = analysis
-
-    @cached_property
-    def data(self):
-        return {
-            'name': self.analysis.name,
-            'level': self.analysis.level,
-            'summary': self.analysis.summary,
-            'description': self.analysis.description,
-            'result': self.analysis.result,
+        super().__init__({
+            'name': analysis.name,
+            'level': analysis.level,
+            'summary': analysis.summary,
+            'description': analysis.description,
+            'result': analysis.result,
             'normal': self.normal,
-        }
+            'abnormal': self.abnormal,
+            'unknown': self.unknown,
+        })
 
     @property
     def analysis(self):
@@ -26,13 +20,18 @@ class Conclusion(object):
 
     @property
     def normal(self):
-        return self.analysis.normal
+        return self.analysis.normal is True
 
-    def __repr__(self):
-        return json.dumps(self.data)
+    @property
+    def abnormal(self):
+        return self.analysis.normal is False
+
+    @property
+    def unknown(self):
+        return self.analysis.normal is None
 
     def __bool__(self):
-        # Note that we are only True if our result is *not* normal,
+        # Note that we are only True if our result is abnormal,
         # since only unexpected conclusions need attention.
-        # If normal, or if None (no conclusion), we are False.
-        return self.normal is False
+        # If normal, or if unknown (no conclusion), we are False.
+        return self.abnormal

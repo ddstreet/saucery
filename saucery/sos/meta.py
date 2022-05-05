@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import json
+
 from collections.abc import MutableMapping
 from contextlib import suppress
 from copy import copy
@@ -9,9 +11,12 @@ class SOSMetaProperty(property):
     def __new__(cls, name, valuetype=str, **kwargs):
         if valuetype == bool:
             cls = BoolSOSMetaProperty
+        if isinstance(valuetype, str) and valuetype.lower() == 'json':
+            cls = JSONSOSMetaProperty
         return super().__new__(cls)
 
     def __init__(self, name, valuetype=str, valuelist=False):
+        # If valuelist=True, the content is treated as a whitespace-separated list
         self.name = name
         self.valuetype = valuetype
         self.valuelist = valuelist
@@ -60,6 +65,18 @@ class BoolSOSMetaProperty(SOSMetaProperty):
 
     def strvalue(self, value):
         return str(value is True)
+
+
+class JSONSOSMetaProperty(SOSMetaProperty):
+    def strvalue(self, value):
+        if value is None:
+            return ''
+        return json.dumps(value)
+
+    def value(self, strvalue):
+        if not strvalue:
+            return ''
+        return json.loads(strvalue)
 
 
 class SOSMetaDict(MutableMapping):

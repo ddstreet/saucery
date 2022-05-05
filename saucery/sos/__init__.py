@@ -83,6 +83,7 @@ class SOS(SauceryBase):
         return SOSMetaDict(self, keys)
 
     seared = SOSMetaProperty('seared', bool)
+    analysis = SOSMetaProperty('analysis', 'json')
 
     def sear(self, resear=False):
         if not self.filesdir.exists() or not self.extracted:
@@ -111,18 +112,24 @@ class SOS(SauceryBase):
             return
 
         self.seared = False
+
         initial_keys = {
             'case': self.case,
             'sosreport_files': str(self.filesdir),
         }
         sosreport_meta = self.lookup('sosreport_meta', initial_keys)
-        if sosreport_meta:
-            for k, v in sosreport_meta.items():
-                self.meta[k] = v
-            self.LOGGER.debug(f'Finished searing: {self.name}')
-            self.seared = True
-        else:
-            self.LOGGER.error(f'Failed to sear: {self.name}')
+        if not sosreport_meta:
+            self.LOGGER.error(f'Failed to set sosreport meta: {self.name}')
+            return
+
+        for k, v in sosreport_meta.items():
+            self.meta[k] = v
+        self.LOGGER.info(f'Finished setting sosreport meta: {self.name}')
+
+        self.analysis = self.reductions.conclusions
+        self.LOGGER.info(f'Finished analysing sosreport: {self.name}')
+
+        self.seared = True
 
     @property
     def filesdir(self):
@@ -180,7 +187,7 @@ class SOS(SauceryBase):
         try:
             with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
                 with tarfile.open(self.sosreport) as tar:
-                    for m in tar.getmembers():
+                    for m in tar:
                         if m.isdev():
                             continue
                         tar.extract(m, path=tmpdir)
@@ -205,7 +212,7 @@ class SOS(SauceryBase):
             self.file_list = file_list
             self.file_count = file_count
             self.total_size = total_size
-        self.LOGGER.debug(f'Extracted {file_count} members ({total_size} bytes): {self.filesdir}')
+        self.LOGGER.info(f'Extracted {file_count} members ({total_size} bytes): {self.filesdir}')
         self.extracted = True
 
     @property
