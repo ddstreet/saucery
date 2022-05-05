@@ -1,0 +1,34 @@
+- name: hotsos.yaml
+  source: hotsos.yaml
+  type: sosmeta
+- name: hotsos.json
+  source: hotsos.yaml
+  type: yaml2json
+- name: hotsos-potential-issues
+  source: hotsos.json
+  type: jq
+  jq: '[.[]."potential-issues"|select(.)]'
+- name: hotsos-bugs-detected
+  source: hotsos.json
+  type: jq
+  jq: '[.[]."bugs-detected"|select(.)]'
+- description: Hotsos Potential Issues
+  level: '3'
+  name: hotsos-issue-analysis
+  source: hotsos-potential-issues
+  summary: List of HotSOS potential issues
+  to: ''
+  type: eq
+- description: Hotsos Bugs Detected
+  level: '3'
+  name: hotsos-bugs-analysis
+  source: hotsos-bugs-detected
+  summary: List of HotSOS bugs detected
+  to: ''
+  type: eq
+- name: hotsos-issues-output
+  type: textinfo
+  source: hotsos-potential-issues
+- name: hotsos-bugs-output
+  type: textinfo
+  source: hotsos-bugs-detected
