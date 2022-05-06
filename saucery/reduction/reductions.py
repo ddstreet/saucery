@@ -38,22 +38,6 @@ class Reductions(UserDict):
     def references(self):
         return self._references.values()
 
-    @property
-    def conclusions(self):
-        return [a.conclusion for a in self.analyses]
-
-    @property
-    def normal_conclusions(self):
-        return [c for c in self.conclusions if c.normal]
-
-    @property
-    def abnormal_conclusions(self):
-        return [c for c in self.conclusions if c.abnormal]
-
-    @property
-    def unknown_conclusions(self):
-        return [c for c in self.conclusions if c.unknown]
-
     def __setitem__(self, key, value):
         if not value:
             raise ValueError(f'Delete key instead of setting value to None')
