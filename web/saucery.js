@@ -30,8 +30,7 @@ $(() => $('.mainindex').css('text-align', 'center').append($('<a>').attr('href',
 // keys are fields, values are functions to generate hrefs
 var SauceryAnchorHrefFunctions = {
     'case': ((v, e) => '/case/' + v),
-    'customerid': ((v, e) => '/customer/' + v),
-    'customername': ((v, e) => '/customer/' + e.customerid),
+    'customer': ((v, e) => '/customer/' + v),
     'hostname': ((v, e) => '/hostname/' + v),
     'machineid': ((v, e) => '/machineid/' + v),
     'name': ((v, e) => '/sos/' + v),
@@ -45,7 +44,7 @@ var SauceryAnchorFields = Object.keys(SauceryAnchorHrefFunctions).concat(Object.
 
 // keys are fields, values are header text
 var SauceryTableHeaders = {
-    'customername': 'Customer',
+    'customer': 'Customer',
     'case': 'Case',
     'hostname': 'Hostname',
     'machineid': 'Machine ID',
