@@ -14,7 +14,7 @@ class IniReference(DictReference, FileReference):
 
     @cached_property
     def parser(self):
-        p = ConfigParser()
+        p = ConfigParser(strict=False)
         p.read(self.paths)
         return p
 
