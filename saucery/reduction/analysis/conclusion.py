@@ -1,23 +1,40 @@
 
-from datetime import datetime
+from collections.abc import Mapping
+from functools import cached_property
 
 
-class Conclusion(dict):
+class Conclusion(Mapping):
     def __init__(self, analysis):
         self._analysis = analysis
-        start = datetime.now()
-        super().__init__({
-            'name': analysis.name,
-            'level': analysis.level,
-            'summary': analysis.summary,
-            'description': analysis.description,
-            'result': analysis.result,
+
+    @cached_property
+    def data(self):
+        '''Get the data for this conclusion.
+
+        This is created outside of the constructor so the instance can be created
+        without actually performing the analysis, which is done lazily when the
+        conclusion result or normal state is actually accessed.
+        '''
+        return {
+            'name': self.analysis.name,
+            'level': self.analysis.level,
+            'summary': self.analysis.summary,
+            'description': self.analysis.description,
+            'result': self.analysis.result,
+            'duration': self.analysis.duration.total_seconds(),
             'normal': self.normal,
             'abnormal': self.abnormal,
             'unknown': self.unknown,
-        })
-        end = datetime.now()
-        self['duration'] = (end - start).total_seconds()
+        }
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
 
     @property
     def analysis(self):
@@ -34,9 +51,3 @@ class Conclusion(dict):
     @property
     def unknown(self):
         return self.analysis.normal is None
-
-    def __bool__(self):
-        # Note that we are only True if our result is abnormal,
-        # since only unexpected conclusions need attention.
-        # If normal, or if unknown (no conclusion), we are False.
-        return self.abnormal
