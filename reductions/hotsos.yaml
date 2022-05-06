@@ -27,8 +27,8 @@
   to: ''
   type: eq
 - name: hotsos-issues-output
-  type: textinfo
+  type: textdebug
   source: hotsos-potential-issues
 - name: hotsos-bugs-output
-  type: textinfo
+  type: textdebug
   source: hotsos-bugs-detected

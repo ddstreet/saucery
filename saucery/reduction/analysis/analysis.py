@@ -602,20 +602,27 @@ class OrAnalysis(LogicalAnalysis):
         return any(analyses)
 
 
-class InfoAnalysis(Analysis):
-    '''InfoAnalysis object.
+class DebugAnalysis(Analysis):
+    '''DebugAnalysis object.
 
-    This creates an informational conclusion.
+    This creates an informational/debug conclusion.
 
     The conclusion 'description' will default to the name of the 'source',
     and the 'result' will be the source 'value'.
 
+    The level defaults to 'debug'.
+
     The 'normal' property will be None if the source value is None,
-    otherwise it will be False.
+    otherwise it will be True.
     '''
     @classmethod
     def TYPE(cls):
-        return 'info'
+        return 'debug'
+
+    @classmethod
+    def fields(cls):
+        return ChainMap({'level': cls._field('text', default='debug')},
+                        super().fields())
 
     @property
     def default_description(self):
@@ -629,29 +636,29 @@ class InfoAnalysis(Analysis):
     def normal(self):
         if self.source_value() is None:
             return None
-        return False
+        return True
 
 
-class TextInfoAnalysis(InfoAnalysis, TextAnalysis):
+class TextDebugAnalysis(DebugAnalysis, TextAnalysis):
     @classmethod
     def TYPE(cls):
-        return 'textinfo'
+        return 'textdebug'
 
 
-class DictInfoAnalysis(InfoAnalysis):
+class DictDebugAnalysis(DebugAnalysis):
     @classmethod
     def TYPE(cls):
-        return 'dictinfo'
+        return 'dictdebug'
 
     @property
     def result(self):
         return self.source_dict()
 
 
-class IndirectInfoAnalysis(InfoAnalysis):
+class IndirectDebugAnalysis(DebugAnalysis):
     @classmethod
     def TYPE(cls):
-        return 'indirectinfo'
+        return 'indirectdebug'
 
     def source_reference(self, source=None):
         return super().source_reference(source or self.source_value())
