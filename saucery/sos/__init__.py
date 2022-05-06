@@ -256,7 +256,7 @@ class SOS(SauceryBase):
             'hostname': self.hostname,
             'machineid': self.machineid,
             'case': self.case,
-            **self.meta,
+            'customer': self.meta.get('customer', ''),
         }
 
     @cached_property
