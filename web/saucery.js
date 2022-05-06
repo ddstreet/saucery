@@ -67,7 +67,7 @@ function SelectSOSEntries(params={}) {
     if (params.filter)
         filterfunction = params.filter;
     else
-        filterfunction = (entry => entry[params.field || SauceryService] == (params.value || SauceryServiceValue));
+        filterfunction = (entry => encodeURIComponent(entry[params.field || SauceryService]) == (params.value || SauceryServiceValue));
 
     anchorFields = params.anchorFields || SauceryAnchorFields;
     anchorHrefFunctions = params.anchorHrefFunctions || SauceryAnchorHrefFunctions;
@@ -111,7 +111,7 @@ function SauceryAnchor(entry, field, textfunction, hreffunction) {
 
     let value = entry[field];
     let text = textfunction ? textfunction(value, entry) : value;
-    let href = hreffunction ? hreffunction(value, entry) : undefined;
+    let href = hreffunction ? hreffunction(encodeURIComponent(value), entry) : undefined;
     let a = $('<a>').text(text);
 
     if (href)
