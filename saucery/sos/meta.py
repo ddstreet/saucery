@@ -71,7 +71,7 @@ class JSONSOSMetaProperty(SOSMetaProperty):
     def strvalue(self, value):
         if value is None:
             return ''
-        return json.dumps(value)
+        return json.dumps(value, indent=2)
 
     def value(self, strvalue):
         if not strvalue:
