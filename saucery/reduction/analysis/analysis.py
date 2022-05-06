@@ -6,6 +6,7 @@ from abc import abstractmethod
 from collections import ChainMap
 from contextlib import suppress
 from copy import copy
+from datetime import datetime
 from functools import cached_property
 
 from saucery.reduction.definition import Definition
@@ -81,8 +82,35 @@ class Analysis(Definition):
     def conclusion(self):
         return Conclusion(self)
 
-    @property
+    @cached_property
+    def duration(self):
+        self.analyse()
+        return self._duration
+
     @abstractmethod
+    def _analyse(self):
+        '''Perform the analysis.
+
+        This must set the self._result and self._normal attributes.
+        '''
+        pass
+
+    def analyse(self):
+        if hasattr(self, '_duration'):
+            return
+
+        start = datetime.now()
+        self._analyse()
+        end = datetime.now()
+
+        if not hasattr(self, '_result'):
+            raise RuntimeError(f'Analysis failed to set result: {self.name}')
+        if not hasattr(self, '_normal'):
+            raise RuntimeError(f'Analysis failed to set normal: {self.name}')
+
+        self._duration = end - start
+
+    @cached_property
     def result(self):
         '''Analysis result description.
 
@@ -90,10 +118,10 @@ class Analysis(Definition):
 
         Returns a string describing the result of the analysis.
         '''
-        pass
+        self.analyse()
+        return self._result
 
-    @property
-    @abstractmethod
+    @cached_property
     def normal(self):
         '''If the analysis result is normal.
 
@@ -102,7 +130,8 @@ class Analysis(Definition):
         Returns True if the analysis result is 'normal', and False if the
         analysis result is not 'normal'.
         '''
-        pass
+        self.analyse()
+        return self._normal
 
     def source_reference(self, source=None):
         return self._reductions.get(source or self.source)
@@ -150,21 +179,17 @@ class RegexAnalysis(TextAnalysis):
     def match(self):
         return re.search(self.get('regex'), self.source_value() or '')
 
-    @property
-    def result(self):
+    def _analyse(self):
         v = self.source_value()
         if v is None:
-            return None
-        if self.match:
-            return self.match.group()
-        return ''
-
-    @property
-    def normal(self):
-        v = self.source_value()
-        if v is None:
-            return None
-        return self.match is None
+            self._result = None
+            self._normal = None
+        elif self.match:
+            self._result = self.match.group()
+            self._normal = False
+        else:
+            self._result = ''
+            self._normal = True
 
 
 class ComparisonAnalysis(Analysis):
@@ -205,13 +230,9 @@ class ComparisonAnalysis(Analysis):
     def comparison(self):
         return self.comparison_class(*self.comparison_args, **self.comparison_kwargs)
 
-    @property
-    def result(self):
-        return self.comparison.describe()
-
-    @property
-    def normal(self):
-        return self.comparison.compare()
+    def _analyse(self):
+        self._result = self.comparison.describe()
+        self._normal = self.comparison.compare()
 
 
 class IndirectComparisonAnalysis(ComparisonAnalysis):
@@ -499,57 +520,42 @@ class ForeachAnalysis(Analysis):
         return [self.anonymous(ChainMap({'source': l}, definition))
                 for l in v.splitlines()]
 
-    @property
-    def result(self):
-        analyses = self.analyses
-        if analyses is None:
-            return None
-        return {a.source: a.result for a in analyses if not a.normal}
-
-    @property
-    def normal(self):
-        analyses = self.analyses
-        if analyses is None:
-            return None
-        normal = [a.normal for a in analyses]
-        if None in normal:
-            return None
-        return all(normal)
+    def _analyse(self):
+        if self.analyses is None:
+            self._result = None
+            self._normal = None
+        else:
+            self._result = {a.source: a.result
+                            for a in self.analyses
+                            if not a.normal}
+            normal = [a.normal for a in self.analyses]
+            if None in normal:
+                self._normal = None
+            self._normal = all(normal)
 
 
 class LogicalAnalysis(Analysis):
+    @classmethod
+    def fields(cls):
+        return ChainMap({cls.TYPE(): cls._field('list')},
+                        super().fields())
+
     def setup(self):
         super().setup()
-        # force generation of analyses at setup
-        self.analyses
+        self.analyses = [self.anonymous(ChainMap({'source': self.source}, definition))
+                         for definition in self.get(self.TYPE())]
 
-    @property
-    @abstractmethod
-    def _definitions(self):
-        pass
-
-    @cached_property
-    def analyses(self):
-        return [self.anonymous(ChainMap({'source': self.source}, definition))
-                for definition in self._definitions]
-
-    @property
-    def result(self):
-        analyses = self.analyses
-        if not analyses:
-            return None
-        return [a.result for a in analyses]
+    def _analyse(self):
+        if not self.analyses:
+            self._result = None
+            self._normal = None
+        else:
+            self._result = [a.result for a in self.analyses]
+            self._normal = self._is_normal([a.normal for a in self.analyses])
 
     @abstractmethod
-    def _normal(self, analyses):
+    def _is_normal(self, normal):
         pass
-
-    @property
-    def normal(self):
-        analyses = self.analyses
-        if not analyses:
-            return None
-        return self._normal([a.normal for a in analyses])
 
 
 class AndAnalysis(LogicalAnalysis):
@@ -564,17 +570,8 @@ class AndAnalysis(LogicalAnalysis):
     def TYPE(cls):
         return 'and'
 
-    @classmethod
-    def fields(cls):
-        return ChainMap({'and': cls._field('list')},
-                        super().fields())
-
-    @property
-    def _definitions(self):
-        return self.get('and')
-
-    def _normal(self, analyses):
-        return any(analyses)
+    def _is_normal(self, normal):
+        return all(normal)
 
 
 class OrAnalysis(LogicalAnalysis):
@@ -589,17 +586,8 @@ class OrAnalysis(LogicalAnalysis):
     def TYPE(cls):
         return 'or'
 
-    @classmethod
-    def fields(cls):
-        return ChainMap({'or': cls._field('list')},
-                        super().fields())
-
-    @property
-    def _definitions(self):
-        return self.get('or')
-
-    def _normal(self, analyses):
-        return any(analyses)
+    def _is_normal(self, normal):
+        return any(normal)
 
 
 class DebugAnalysis(Analysis):
@@ -628,15 +616,9 @@ class DebugAnalysis(Analysis):
     def default_description(self):
         return self.source
 
-    @property
-    def result(self):
-        return self.source_value()
-
-    @property
-    def normal(self):
-        if self.source_value() is None:
-            return None
-        return True
+    def _analyse(self):
+        self._result = self.source_value()
+        self._normal = None if self.source_value() is None else True
 
 
 class TextDebugAnalysis(DebugAnalysis, TextAnalysis):
@@ -650,9 +632,9 @@ class DictDebugAnalysis(DebugAnalysis):
     def TYPE(cls):
         return 'dictdebug'
 
-    @property
-    def result(self):
-        return self.source_dict()
+    def _analyse(self):
+        super()._analyse()
+        self._result = self.source_dict()
 
 
 class IndirectDebugAnalysis(DebugAnalysis):
