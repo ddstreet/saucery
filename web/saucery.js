@@ -38,9 +38,21 @@ var SauceryAnchorHrefFunctions = {
 }
 var SauceryAnchorTextFunctions = {
     'datetime': ((v, e) => DateToYMD(new Date(v))),
+    'conclusions_critical': ((v, e) => v.toString()),
+    'conclusions_error': ((v, e) => v.toString()),
+    'conclusions_warning': ((v, e) => v.toString()),
+    'conclusions_info': ((v, e) => v.toString()),
+    'conclusions_debug': ((v, e) => v.toString()),
 }
 // entry fields that should be updated on page load
-var SauceryAnchorFields = Object.keys(SauceryAnchorHrefFunctions).concat(Object.keys(SauceryAnchorTextFunctions));
+var SauceryAnchorFields = [
+    'case',
+    'customer',
+    'hostname',
+    'machineid',
+    'name',
+    'sosreport',
+]
 
 // keys are fields, values are header text
 var SauceryTableHeaders = {
@@ -50,9 +62,24 @@ var SauceryTableHeaders = {
     'machineid': 'Machine ID',
     'datetime': 'Date',
     'name': 'SOS',
+    'conclusions_critical': 'Criticals',
+    'conclusions_error': 'Errors',
+    'conclusions_warning': 'Warnings',
+    'conclusions_info': 'Infos',
+    'conclusions_debug': 'Debugs',
 }
 // table column fields, in order they should be displayed
-var SauceryTableFields = Object.keys(SauceryTableHeaders);
+var SauceryTableFields = [
+    'customer',
+    'case',
+    'hostname',
+    'machineid',
+    'datetime',
+    'name',
+    'conclusions_critical',
+    'conclusions_error',
+    'conclusions_warning',
+]
 
 // params is an object with optional fields:
 //   filter: a function passed to entries.filter(); this overrides field/value filtering
@@ -85,7 +112,7 @@ function SelectSOSEntries(params={}) {
                         list.push(entry);
                     return list;
                 }, [])
-                .sort((a, b) => a[field].localeCompare(b[field]));
+                .sort((a, b) => a[field].toString().localeCompare(b[field].toString()));
 
             let anchors = entries.map(function (entry) {
                 return SauceryAnchor(entry, field, anchorTextFunctions[field], anchorHrefFunctions[field]);
