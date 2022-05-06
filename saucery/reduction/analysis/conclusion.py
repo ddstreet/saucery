@@ -1,8 +1,11 @@
 
+from datetime import datetime
+
 
 class Conclusion(dict):
     def __init__(self, analysis):
         self._analysis = analysis
+        start = datetime.now()
         super().__init__({
             'name': analysis.name,
             'level': analysis.level,
@@ -13,6 +16,8 @@ class Conclusion(dict):
             'abnormal': self.abnormal,
             'unknown': self.unknown,
         })
+        end = datetime.now()
+        self['duration'] = (end - start).total_seconds()
 
     @property
     def analysis(self):
