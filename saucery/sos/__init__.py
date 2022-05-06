@@ -13,6 +13,7 @@ from types import MappingProxyType
 
 from saucery.base import SauceryBase
 from saucery.reduction import Reductions
+from saucery.reduction.analysis.analysis import Analysis
 from saucery.sos.meta import SOSMetaDict
 from saucery.sos.meta import SOSMetaProperty
 
@@ -83,7 +84,7 @@ class SOS(SauceryBase):
         return SOSMetaDict(self, keys)
 
     seared = SOSMetaProperty('seared', bool)
-    analysis = SOSMetaProperty('analysis', 'json')
+    conclusions = SOSMetaProperty('conclusions', 'json')
 
     def sear(self, resear=False):
         if not self.filesdir.exists() or not self.extracted:
@@ -130,7 +131,7 @@ class SOS(SauceryBase):
         for a in self.reductions.analyses:
             self.LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
             conclusions.append(dict(a.conclusion))
-        self.analysis = conclusions
+        self.conclusions = conclusions
         self.LOGGER.info(f'Finished analysing sosreport: {self.name}')
 
         self.seared = True
@@ -246,6 +247,20 @@ class SOS(SauceryBase):
     def machineid(self):
         return self.file_text('etc/machine-id')
 
+    @cached_property
+    def reductions(self):
+        return Reductions(self, self.config.get('reductions'))
+
+    def _conclusions_level_count(self, level):
+        level = level.lower()
+        if level not in Analysis.VALID_LEVELS:
+            raise ValueError(f'Invalid analysis level {level}: {self.name}')
+        conclusions = self.conclusions
+        if not conclusions:
+            return '?'
+        return len([c for c in conclusions
+                    if c.get('abnormal') and c.get('level') == level])
+
     @property
     def json(self):
         self.LOGGER.debug(f'Generating JSON for {self.name}')
@@ -257,8 +272,6 @@ class SOS(SauceryBase):
             'machineid': self.machineid,
             'case': self.case,
             'customer': self.meta.get('customer', ''),
+            **{f'conclusions_{level}': self._conclusions_level_count(level)
+               for level in Analysis.VALID_LEVELS},
         }
-
-    @cached_property
-    def reductions(self):
-        return Reductions(self, self.config.get('reductions'))
