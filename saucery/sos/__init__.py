@@ -126,7 +126,11 @@ class SOS(SauceryBase):
             self.meta[k] = v
         self.LOGGER.info(f'Finished setting sosreport meta: {self.name}')
 
-        self.analysis = self.reductions.conclusions
+        conclusions = []
+        for a in self.reductions.analyses:
+            self.LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
+            conclusions.append(dict(a.conclusion))
+        self.analysis = conclusions
         self.LOGGER.info(f'Finished analysing sosreport: {self.name}')
 
         self.seared = True
