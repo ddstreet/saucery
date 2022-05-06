@@ -13,14 +13,14 @@
   type: jq
   jq: '[.[]."bugs-detected"|select(.)]'
 - description: Hotsos Potential Issues
-  level: '3'
+  level: error
   name: hotsos-issue-analysis
   source: hotsos-potential-issues
   summary: List of HotSOS potential issues
   to: ''
   type: eq
 - description: Hotsos Bugs Detected
-  level: '3'
+  level: warning
   name: hotsos-bugs-analysis
   source: hotsos-bugs-detected
   summary: List of HotSOS bugs detected
