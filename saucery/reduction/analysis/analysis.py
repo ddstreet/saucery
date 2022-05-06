@@ -36,10 +36,11 @@ class Analysis(Definition):
     This represents an analysis of reference(s).
     '''
     ERROR_CLASS = InvalidAnalysisError
+    VALID_LEVELS = ('critical', 'error', 'warning', 'info', 'debug')
 
     @classmethod
     def fields(cls):
-        return ChainMap({'level': cls._field(['int', 'text'], default='info'),
+        return ChainMap({'level': cls._field('text', default='info'),
                          'description': cls._field('text', default=''),
                          'summary': cls._field('text', default='')},
                         super().fields())
@@ -55,12 +56,10 @@ class Analysis(Definition):
 
     @cached_property
     def level(self):
-        level = self.get('level')
-        with suppress((TypeError, ValueError)):
-            return int(level)
-        with suppress((TypeError, AttributeError)):
-            return getattr(logging, level.upper())
-        self._raise(f"invalid level: '{level}'")
+        level = self.get('level').lower()
+        if level not in self.VALID_LEVELS:
+            self._raise(f"invalid level: '{level}'")
+        return level
 
     @property
     def default_summary(self):
