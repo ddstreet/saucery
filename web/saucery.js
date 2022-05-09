@@ -122,11 +122,7 @@ function SelectSOSEntries(params={}) {
         });
 
         SauceryTable('.SauceryTable', SOSEntries, tableFields, tableHeaders, anchorTextFunctions, anchorHrefFunctions);
-
-        if (SauceryService == 'sos') {
-            SauceryHotSOS('.hotsos');
-            SauceryTree('.SauceryTree');
-        }
+        SauceryTree('.SauceryTree');
     });
 }
 
@@ -175,11 +171,6 @@ function SauceryTable(elements,
         'pageLength': 25,
         'order': [[ 4, 'desc' ], [ 2, 'desc' ]],
     });
-}
-
-function SauceryHotSOS(elements) {
-    $('<a>').attr('href', '/sos/' + SauceryServiceValue + '/hotsos.yaml').text('HotSOS')
-        .appendTo(elements);
 }
 
 function SauceryTree(elements) {
