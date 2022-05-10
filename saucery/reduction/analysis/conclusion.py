@@ -20,7 +20,7 @@ class Conclusion(Mapping):
             'level': self.analysis.level,
             'summary': self.analysis.summary,
             'description': self.analysis.description,
-            'result': self.analysis.result,
+            'results': self.analysis.results,
             'duration': self.analysis.duration.total_seconds(),
             'normal': self.normal,
             'abnormal': self.abnormal,

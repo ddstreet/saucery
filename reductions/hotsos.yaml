@@ -17,14 +17,14 @@
   name: hotsos-issue-analysis
   source: hotsos-potential-issues
   summary: List of HotSOS potential issues
-  to: ''
+  to: '[]'
   type: eq
 - description: Hotsos Bugs Detected
   level: warning
   name: hotsos-bugs-analysis
   source: hotsos-bugs-detected
   summary: List of HotSOS bugs detected
-  to: ''
+  to: '[]'
   type: eq
 - name: hotsos-issues-output
   type: textdebug

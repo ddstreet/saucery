@@ -85,9 +85,9 @@ class Analysis(Definition):
     def _analyse(self):
         '''Perform the analysis.
 
-        By default, this simply gets the result.
+        By default, this simply gets the results.
         '''
-        self._result
+        self._results
 
     def analyse(self):
         self._duration
@@ -105,24 +105,22 @@ class Analysis(Definition):
         return self._duration
 
     @property
-    def result(self):
-        '''Analysis result description.
+    def results(self):
+        '''Analysis results description.
 
-        Returns None if no analysis could be performed.
-
-        Returns a string describing the result of the analysis.
+        Returns None if no analysis could be performed, otherwise returns a list
+        of strings describing the results of the analysis.
         '''
         self.analyse()
-        return self._result
+        return self._results
 
     @property
     def normal(self):
-        '''If the analysis result is normal.
+        '''If the analysis results are normal.
 
-        Returns None if no analysis could be performed.
-
-        Returns True if the analysis result is 'normal', and False if the
-        analysis result is not 'normal'.
+        Returns None if no analysis could be performed, otherwise returns True
+        if the analysis results are 'normal', and False if the analysis results
+        are not 'normal'.
         '''
         self.analyse()
         return self._normal
@@ -161,29 +159,17 @@ class RegexAnalysis(TextAnalysis):
         return ChainMap({'regex': cls._field('text')},
                         super().fields())
 
-    @property
-    def description(self):
-        d = super().description
-        m = self.match
-        if not m:
-            return d
-        return d.format(*m.groups(default=''), **m.groupdict(default=''))
-
     @cached_property
-    def match(self):
-        return re.search(self.get('regex'), self.source_value() or '')
-
-    @property
-    def _result(self):
+    def _results(self):
         if self.source_value() is None:
             return None
-        return self.match.group() if self.match else ''
+        return re.findall(self.get('regex'), self.source_value())
 
     @property
     def _normal(self):
-        if self.source_value() is None:
+        if self._results is None:
             return None
-        return not self.match
+        return not self._results
 
 
 class ComparisonAnalysis(Analysis):
@@ -224,9 +210,13 @@ class ComparisonAnalysis(Analysis):
     def comparison(self):
         return self.comparison_class(*self.comparison_args, **self.comparison_kwargs)
 
-    def _analyse(self):
-        self._result = self.comparison.describe()
-        self._normal = self.comparison.compare()
+    @property
+    def _results(self):
+        return [self.comparison.describe()]
+
+    @property
+    def _normal(self):
+        return self.comparison.compare()
 
 
 class IndirectComparisonAnalysis(ComparisonAnalysis):
@@ -359,6 +349,10 @@ class DictAnalysis(ComparisonAnalysis):
                          'ignore_fields': self.get('ignore_fields'),
                          'ignore_missing': self.get('ignore_missing')},
                         super().comparison_kwargs)
+
+    @property
+    def _results(self):
+        return self.comparison.describe()
 
 
 class DictLtAnalysis(DictAnalysis, LtAnalysis):
@@ -515,10 +509,10 @@ class ForeachAnalysis(Analysis):
                 for l in v.splitlines()]
 
     @property
-    def _result(self):
+    def _results(self):
         if self.analyses is None:
             return None
-        return {a.source: a.result for a in self.analyses}
+        return chain(*[a.results for a in self.analyses])
 
     @property
     def _normal(self):
@@ -542,10 +536,10 @@ class LogicalAnalysis(Analysis):
                          for definition in self.get(self.TYPE())]
 
     @property
-    def _result(self):
+    def _results(self):
         if not self.analyses:
             return None
-        return [a.result for a in self.analyses]
+        return chain(*[a.results for a in self.analyses])
 
     @property
     def _normal(self):
@@ -602,7 +596,7 @@ class DebugAnalysis(Analysis):
     This creates an informational/debug conclusion.
 
     The conclusion 'description' will default to the name of the 'source',
-    and the 'result' will be the source 'value'.
+    and the 'results' will be the source 'value'.
 
     The level defaults to 'debug'.
 
@@ -623,12 +617,14 @@ class DebugAnalysis(Analysis):
         return self.source
 
     @property
-    def _result(self):
-        return self.source_value()
+    def _results(self):
+        if self.source_value() is None:
+            return None
+        return [self.source_value()]
 
     @property
     def _normal(self):
-        return None if self._result is None else True
+        return None if self._results is None else True
 
 
 class TextDebugAnalysis(DebugAnalysis, TextAnalysis):
@@ -643,8 +639,10 @@ class DictDebugAnalysis(DebugAnalysis):
         return 'dictdebug'
 
     @property
-    def _result(self):
-        return self.source_dict()
+    def _results(self):
+        if self.source_dict() is None:
+            return None
+        return [self.source_dict()]
 
 
 class IndirectDebugAnalysis(DebugAnalysis):

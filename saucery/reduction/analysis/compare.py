@@ -223,14 +223,14 @@ class DictComparison(Comparison):
     @lru_cache
     def compare(self):
         if len(self.missing_fields) > 0 and not self.ignore_missing:
-            return False
+            return None
         return len(self.failed_fields) == 0
 
     @lru_cache
     def describe(self):
         if self.compare():
-            return ''
+            return ['']
         fields = self.failed_fields
         if not self.ignore_missing:
             fields += self.missing_fields
-        return {f: self.describe_field(f) for f in fields}
+        return [self.describe_field(f) for f in fields]
