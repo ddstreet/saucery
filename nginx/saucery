@@ -49,8 +49,7 @@ server {
     rewrite ^/(favicon\.ico)$              /web/$1               last;
     rewrite ^/$                            /web/index.html       last;
 
-    rewrite ^/([a-z]+\.html)$              /web/$1               last;
-    rewrite ^/([a-z]+\.js)$                /web/$1               last;
+    rewrite ^/([a-z]+\.(html|js|css))$     /web/$1               last;
 
     rewrite ^/case/                        /web/case.html        last;
     rewrite ^/customer/                    /web/customer.html    last;
