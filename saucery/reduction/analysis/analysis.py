@@ -105,6 +105,12 @@ class Analysis(Definition):
         return self._duration
 
     @property
+    def _results(self):
+        if self.source_value() is None:
+            return None
+        return self.source_value()
+
+    @property
     def results(self):
         '''Analysis results description.
 
@@ -113,6 +119,12 @@ class Analysis(Definition):
         '''
         self.analyse()
         return self._results
+
+    @property
+    def _normal(self):
+        if self._results is None:
+            return None
+        return not self._results
 
     @property
     def normal(self):
@@ -141,6 +153,12 @@ class Analysis(Definition):
         return ref.value
 
 
+class BasicAnalysis(Analysis):
+    @classmethod
+    def TYPE(cls):
+        return 'analysis'
+
+
 class TextAnalysis(Analysis):
     def source_value(self, source=None):
         ref = self.source_reference(source)
@@ -164,12 +182,6 @@ class RegexAnalysis(TextAnalysis):
         if self.source_value() is None:
             return None
         return re.findall(self.get('regex'), self.source_value())
-
-    @property
-    def _normal(self):
-        if self._results is None:
-            return None
-        return not self._results
 
 
 class ComparisonAnalysis(Analysis):
