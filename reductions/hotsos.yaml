@@ -6,29 +6,27 @@
   type: yaml2json
 - name: hotsos-potential-issues
   source: hotsos.json
-  type: jq
-  jq: '[.[]."potential-issues"|select(.)]'
+  type: chain
+  chain:
+  - type: jq
+    jq: '[.[]."potential-issues"|select(.)|.[]]|flatten'
+  - type: eval
 - name: hotsos-bugs-detected
   source: hotsos.json
-  type: jq
-  jq: '[.[]."bugs-detected"|select(.)]'
+  type: chain
+  chain:
+  - type: jq
+    jq: '[.[]."bugs-detected"|select(.)|.[]]|flatten'
+  - type: eval
 - description: Hotsos Potential Issues
   level: error
   name: hotsos-issue-analysis
   source: hotsos-potential-issues
   summary: List of HotSOS potential issues
-  to: '[]'
-  type: eq
+  type: analysis
 - description: Hotsos Bugs Detected
   level: warning
   name: hotsos-bugs-analysis
   source: hotsos-bugs-detected
   summary: List of HotSOS bugs detected
-  to: '[]'
-  type: eq
-- name: hotsos-issues-output
-  type: textdebug
-  source: hotsos-potential-issues
-- name: hotsos-bugs-output
-  type: textdebug
-  source: hotsos-bugs-detected
+  type: analysis
