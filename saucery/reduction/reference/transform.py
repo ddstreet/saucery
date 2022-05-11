@@ -1,4 +1,5 @@
 
+import ast
 import json
 import yaml
 
@@ -166,6 +167,19 @@ class ForeachReference(IndirectReference):
     @cached_property
     def value(self):
         return '\n'.join([r.get('name') for r in self.anonymous_references()]) or None
+
+
+class EvalReference(IndirectReference):
+    @classmethod
+    def TYPE(cls):
+        return 'eval'
+
+    @cached_property
+    def value(self):
+        v = super().value
+        if v is None:
+            return v
+        return ast.literal_eval(v)
 
 
 class Yaml2JsonReference(IndirectReference):
