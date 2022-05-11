@@ -550,9 +550,8 @@ class LogicalAnalysis(Analysis):
             return None
         return self.is_normal(normal)
 
-    @property
     @abstractmethod
-    def is_normal(self):
+    def is_normal(self, values):
         pass
 
 
@@ -568,9 +567,8 @@ class AndAnalysis(LogicalAnalysis):
     def TYPE(cls):
         return 'and'
 
-    @property
-    def is_normal(self):
-        return all
+    def is_normal(self, values):
+        return all(values)
 
 
 class OrAnalysis(LogicalAnalysis):
@@ -585,9 +583,8 @@ class OrAnalysis(LogicalAnalysis):
     def TYPE(cls):
         return 'or'
 
-    @property
-    def is_normal(self):
-        return any
+    def is_normal(self, values):
+        return any(values)
 
 
 class DebugAnalysis(Analysis):
