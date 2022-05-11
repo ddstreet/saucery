@@ -16,7 +16,7 @@
   type: chain
   chain:
   - type: jq
-    jq: '[.[]."bugs-detected"|select(.)|.[]]|flatten'
+    jq: '[.[]."bugs-detected"|select(.)|.[].desc]|flatten'
   - type: eval
 - description: Hotsos Potential Issues
   level: error
