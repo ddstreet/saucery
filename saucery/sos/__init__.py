@@ -130,7 +130,10 @@ class SOS(SauceryBase):
         conclusions = []
         for a in self.reductions.analyses:
             self.LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
-            conclusions.append(dict(a.conclusion))
+            try:
+                conclusions.append(dict(a.conclusion))
+            except:
+                self.LOGGER.exception(f'Analysis {a.name} failed, skipping')
         self.conclusions = conclusions
         self.LOGGER.info(f'Finished analysing sosreport: {self.name}')
 
