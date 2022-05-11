@@ -8,6 +8,7 @@ import tempfile
 from collections import ChainMap
 from datetime import datetime
 from functools import cached_property
+from itertools import chain
 from pathlib import Path
 from types import MappingProxyType
 
@@ -261,8 +262,8 @@ class SOS(SauceryBase):
         conclusions = self.conclusions
         if not conclusions:
             return '?'
-        return len(chain(*[c.results for c in conclusions
-                           if c.get('abnormal') and c.get('level') == level]))
+        return len(list(chain(*[c.get('results') for c in conclusions
+                                if c.get('abnormal') and c.get('level') == level])))
 
     @property
     def json(self):
@@ -275,6 +276,6 @@ class SOS(SauceryBase):
             'machineid': self.machineid,
             'case': self.case,
             'customer': self.meta.get('customer', ''),
-            **{f'conclusions_{level}': self._conclusions_level_count(level)
-               for level in Analysis.VALID_LEVELS},
+            'conclusions': {level: self._conclusions_level_count(level)
+                            for level in Analysis.VALID_LEVELS},
         }
