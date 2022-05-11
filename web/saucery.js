@@ -100,7 +100,8 @@ function SelectSOSEntries(params={}) {
         });
 
         SauceryTable('.SauceryTable', SOSEntries, tableFields, tableHeaders, anchorFunctions);
-        SauceryTree('.SauceryTree');
+        ConclusionsTree('.ConclusionsTree');
+        FilesTree('.FilesTree');
     });
 }
 
@@ -118,6 +119,9 @@ function SauceryTable(elements,
                       fields=SauceryTableFields,
                       headers=SauceryTableHeaders,
                       anchorFunctions=SauceryAnchorFunctions) {
+    if (elements.length == 0)
+        return;
+
     let table = $('<table>');
     let thead = $('<thead>').appendTo(table);
     let tbody = $('<tbody>').appendTo(table);
@@ -142,7 +146,10 @@ function SauceryTable(elements,
     });
 }
 
-function SauceryTree(elements) {
+function FilesTree(elements) {
+    if (elements.length == 0)
+        return;
+
     let sospath = SauceryServicePath.split('/').filter(p => p).reverse();
 
     if (sospath.length == 0) {
@@ -179,6 +186,48 @@ function SauceryTree(elements) {
     $('<p>').jstree({'core': {'data': jstree_data}})
         .on('select_node.jstree', (evt, data) => window.location = data.node.original.href)
         .appendTo(elements);
+}
+
+function ConclusionsTree(elements) {
+    if (elements.length == 0)
+        return;
+
+    $.getJSON('conclusions', {'format': 'json'}, (data => PopulateConclusionsTree(data, elements)));
+}
+
+function PopulateConclusionsTree(data, elements) {
+    let tree = $('<div>');
+    let ul = $('<ul>').appendTo(tree);
+    let levels = new Map();
+
+    data.forEach(entry => {
+        if (!entry.abnormal)
+            return;
+        if (!levels.has(entry.level))
+            levels.set(entry.level, new Array());
+        entry.results.forEach(result => levels.get(entry.level).push(result));
+    });
+
+    let issues = ['critical', 'error', 'warning'];
+    let info = ['info'];
+
+    issues.concat(info).forEach(level => {
+        if (levels.has(level)) {
+            let li = $('<li>').text(level[0].toUpperCase() + level.slice(1) + 's').appendTo(ul);
+            let sublist = $('<ul>').appendTo(li);
+            if (issues.includes(level))
+                li.addClass('jstree-open');
+            levels.get(level).forEach(result => $('<li>').text(result).appendTo(sublist));
+        }
+    });
+
+    tree.jstree({
+        'core': {
+            'themes': {
+                'icons': false,
+            },
+        },
+    }).appendTo(elements);
 }
 
 function JoinAnchors(anchors, separatortext=', ') {
