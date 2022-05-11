@@ -261,8 +261,8 @@ class SOS(SauceryBase):
         conclusions = self.conclusions
         if not conclusions:
             return '?'
-        return len([c for c in conclusions
-                    if c.get('abnormal') and c.get('level') == level])
+        return len(chain(*[c.results for c in conclusions
+                           if c.get('abnormal') and c.get('level') == level]))
 
     @property
     def json(self):
