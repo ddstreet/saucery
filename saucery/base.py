@@ -40,8 +40,7 @@ class SauceryBase(ABC):
         attr = f'_{name}'
         prop = cached_property(lambda self: getattr(self, attr, cls(instance=self)))
         prop.__set_name__(SauceryBase, name)
-        # This allows all subclasses to access other instances by 'self.CLASSNAME',
-        # for example a grocer instance can access the saucery with 'self.saucery'
+        # This allows all subclasses to access other instances by 'self.CLASSNAME'
         setattr(SauceryBase, name, prop)
 
     def __init__(self, *, instance=None, **kwargs):

@@ -3,7 +3,6 @@
 import os
 
 from concurrent import futures
-from functools import cached_property
 from functools import partial
 from pathlib import Path
 
@@ -12,44 +11,14 @@ from saucery.sos import SOS
 
 
 class Saucier(SauceryBase):
-    DEFAULTS = {
-        'max_age': '1 day',
-    }
-
     def sosreport(self, name):
         if isinstance(name, SOS):
             return name
         return self.saucery.sosreport(Path(name).name)
 
     @property
-    def max_age(self):
-        return self.config.get('max_age')
-
-    @cached_property
-    def shelves(self):
-        return self.config.get('shelves', '').split()
-
-    def browse(self, max_age=None):
-        max_age = max_age or self.max_age
-        for shelf in self.shelves:
-            self.LOGGER.debug(f'Browsing shelves: {shelf}')
-            for item in self.grocery.browse(shelf, max_age=max_age):
-                self.LOGGER.debug(f'Browsing item: {item}')
-                try:
-                    if not self.sosreport(item).exists():
-                        yield item
-                except ValueError as e:
-                    self.LOGGER.error(e)
-
-    @property
     def sosreports(self):
         return self.saucery.sosreports
-
-    def buy(self, item):
-        sos = self.sosreport(item)
-        self.grocery.buy(item, sos)
-        sos.case = self.lookup('sosreport_case', {'path': item}).get('case')
-        return sos
 
     def _sosreports(self, sosreports):
         soses = []

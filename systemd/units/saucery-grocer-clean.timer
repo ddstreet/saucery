@@ -1,9 +1,0 @@
-[Unit]
-Description=Timer for Saucery Grocer shelf cleaning
-
-[Timer]
-OnUnitInactiveSec=1day
-OnStartupSec=1day
-
-[Install]
-WantedBy=timers.target

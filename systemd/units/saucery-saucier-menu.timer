@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer to rebuild saucery menu
+
+[Timer]
+OnUnitInactiveSec=5min
+OnStartupSec=5min
+
+[Install]
+WantedBy=timers.target

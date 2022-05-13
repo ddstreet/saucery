@@ -1,0 +1,6 @@
+[Unit]
+Description=Sear new sosreports
+
+[Service]
+ExecStart=saucier -S --logname saucier
+User=saucery

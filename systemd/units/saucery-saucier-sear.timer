@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer to sear new sosreports
+
+[Timer]
+OnUnitInactiveSec=15min
+OnStartupSec=15min
+
+[Install]
+WantedBy=timers.target

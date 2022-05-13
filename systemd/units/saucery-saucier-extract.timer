@@ -1,5 +1,5 @@
 [Unit]
-Description=Timer for Saucery Saucier grocery shopping
+Description=Timer to extract new sosreports
 
 [Timer]
 OnUnitInactiveSec=15min

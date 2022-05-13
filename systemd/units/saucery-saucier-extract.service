@@ -1,0 +1,6 @@
+[Unit]
+Description=Extract new sosreports
+
+[Service]
+ExecStart=saucier -E --logname saucier
+User=saucery

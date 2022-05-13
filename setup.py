@@ -11,8 +11,8 @@ setup(
         'saucery/reduction/reference',
     ],
     install_requires=[
-        'paramiko',
-        'dateparser',
     ],
-    scripts=['scripts/grocer', 'scripts/saucier'],
+    scripts=[
+        'scripts/saucier',
+    ],
 )

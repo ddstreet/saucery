@@ -1,0 +1,6 @@
+[Unit]
+Description=Create new saucery menu
+
+[Service]
+ExecStart=saucier -M --logname saucier
+User=saucery
