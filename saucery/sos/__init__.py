@@ -108,8 +108,8 @@ class SOS(SauceryBase):
             try:
                 result = subprocess.run(cmd.split() + [self.filesdir], encoding='utf-8',
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            except subprocess.SubprocessException as e:
-                self.LOGGER.exception(f"Error getting meta '{key}': {self.name}: {e}")
+            except subprocess.SubprocessException:
+                self.LOGGER.exception(f"Error getting meta '{key}': {self.name}")
                 continue
             if result.returncode != 0:
                 self.LOGGER.error(f"Error ({result.returncode}) getting meta '{key}': {self.name}")
@@ -125,7 +125,7 @@ class SOS(SauceryBase):
             self.LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
             try:
                 conclusions.append(dict(a.conclusion))
-            except:
+            except Exception:
                 self.LOGGER.exception(f'Analysis {a.name} failed, skipping')
         self.conclusions = conclusions
         self.LOGGER.info(f'Finished analysing sosreport: {self.name}')
@@ -205,8 +205,8 @@ class SOS(SauceryBase):
                     raise ValueError(f'sosreport contains multiple top-level dirs: {tmpdir}')
                 # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
                 topfiles[0].rename(self.filesdir)
-        except Exception as e:
-            self.LOGGER.exception(f'Invalid sosreport, error extracting: {self.sosreport}: {e}')
+        except Exception:
+            self.LOGGER.error(f'Invalid sosreport, error extracting: {self.sosreport}')
             self.invalid = True
             return
 
