@@ -1,5 +1,5 @@
 
-from .reduction import *
+from .reduction import * # noqa
 from .saucery import Saucery
 from .saucier import Saucier
 from .sos import SOS

@@ -24,7 +24,7 @@ class JqReference(TextReference):
         super().setup()
         self._jq = which('jq')
         if not self._jq:
-            self._raise(f"requires 'jq' command, please install jq package.")
+            self._raise("requires 'jq' command, please install jq package.")
 
     @property
     def jqenv(self):
@@ -47,8 +47,6 @@ class JqReference(TextReference):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
         if result.returncode != 0:
-            # need to print this in -verbose mode
-            #print(result.stderr)
             return None
         return result.stdout
 

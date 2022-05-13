@@ -117,7 +117,7 @@ class ChainReference(IndirectReference):
 
     @classmethod
     def fields(cls):
-        return ChainMap({'chain': cls._field('list')}, 
+        return ChainMap({'chain': cls._field('list')},
                         super().fields())
 
     def setup(self):
@@ -126,7 +126,7 @@ class ChainReference(IndirectReference):
 
     def _build_chain(self):
         if len(self.get('chain')) == 0:
-            self._raise(f'requires at least one chain entry')
+            self._raise('requires at least one chain entry')
         chain = []
         source = self.source
         for definition in map(copy, self.get('chain')):
@@ -161,8 +161,8 @@ class ForeachReference(IndirectReference):
                         super().fields())
 
     def anonymous_references(self):
-        return [self.anonymous(ChainMap({self.get('field'): l}, self.get('as')))
-                for l in (super().value or '').splitlines() if l]
+        return [self.anonymous(ChainMap({self.get('field'): line}, self.get('as')))
+                for line in (super().value or '').splitlines() if line]
 
     @cached_property
     def value(self):

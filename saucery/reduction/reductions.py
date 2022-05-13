@@ -5,9 +5,8 @@ import yaml
 
 from collections import ChainMap
 from collections import UserDict
-from functools import cached_property
+from contextlib import suppress
 from pathlib import Path
-from types import MappingProxyType
 
 from .analysis import Analysis
 from .definition import InvalidDefinitionError
@@ -40,7 +39,7 @@ class Reductions(UserDict):
 
     def __setitem__(self, key, value):
         if not value:
-            raise ValueError(f'Delete key instead of setting value to None')
+            raise ValueError('Delete key instead of setting value to None')
 
         if key in self:
             raise InvalidDefinitionError(f'Duplicate definition with name {key}')

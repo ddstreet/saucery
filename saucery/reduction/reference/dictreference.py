@@ -10,7 +10,6 @@ from functools import cached_property
 from .reference import FileReference
 from .reference import Reference
 from .reference import SubdirFileReference
-from .textreference import LsReference
 from .textreference import TextReference
 from .transform import IndirectReference
 
@@ -92,7 +91,7 @@ class IndirectDictReference(DictReference, TextReference):
         return ChainMap({'separator': cls._field('text', default='='),
                          'strip': cls._field('boolean', default=True),
                          'removecomments': cls._field('boolean', default=True),
-                         'comment': cls._field('text', default='\s*#')},
+                         'comment': cls._field('text', default=r'\s*#')},
                         super().fields())
 
     def _strip(self, value, force=False):

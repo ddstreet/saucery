@@ -23,8 +23,8 @@ class BytesReference(IndirectReference):
 
     @classmethod
     def fields(cls):
-        return ChainMap({'encoding': self._field('text', default='utf-8'),
-                         'errors': self._field('text', default='backslashreplace')},
+        return ChainMap({'encoding': cls._field('text', default='utf-8'),
+                         'errors': cls._field('text', default='backslashreplace')},
                         super().fields())
 
     @cached_property

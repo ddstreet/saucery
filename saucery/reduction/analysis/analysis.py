@@ -1,13 +1,11 @@
 
-import logging
 import re
 
 from abc import abstractmethod
 from collections import ChainMap
-from contextlib import suppress
-from copy import copy
 from datetime import datetime
 from functools import cached_property
+from itertools import chain
 
 from saucery.reduction.definition import Definition
 from saucery.reduction.definition import InvalidDefinitionError
@@ -517,8 +515,8 @@ class ForeachAnalysis(Analysis):
             return None
 
         definition = self.get('as')
-        return [self.anonymous(ChainMap({'source': l}, definition))
-                for l in v.splitlines()]
+        return [self.anonymous(ChainMap({'source': line}, definition))
+                for line in v.splitlines()]
 
     @property
     def _results(self):

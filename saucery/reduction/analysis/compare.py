@@ -1,8 +1,6 @@
 
-import json
 import operator
 import re
-import yaml
 
 from abc import ABC
 from abc import abstractmethod
@@ -138,7 +136,8 @@ class GtComparison(OpComparison):
 
 class StringComparison(Comparison):
     def __init__(self, analysis, a, b, *args, **kwargs):
-        super().__init__(analysis, self.to_str(a, **kwargs), self.to_str(b, **kwargs), *args, **kwargs)
+        super().__init__(analysis, self.to_str(a, **kwargs), self.to_str(b, **kwargs),
+                         *args, **kwargs)
 
 
 class NumberComparison(Comparison):

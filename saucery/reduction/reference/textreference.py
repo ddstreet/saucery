@@ -46,7 +46,7 @@ class LsReference(FileReference):
     This lists file(s) and dir(s), similar to the 'ls' command.
 
     This has optional keys:
-      directory: Like ls -d, if True this lists directories themselves, not their contents (default False)
+      directory: Like ls -d, if True list dirs themselves, not contents (default False)
       listfiles: If True, entries that are files are included (default True)
       listdirs: If True, entries that are dirs are included (default False)
       listlinks: If True, entries that are symlinks are included (default False)
@@ -100,7 +100,7 @@ class SplitReference(TextReference):
     the split strings, one on each line.
 
     This implementation has optional keys:
-      pattern: The regex pattern to apply (default '\s+')
+      pattern: The regex pattern to apply
       max: The maximum number of splits (default no max)
       splitlines: If true, the pattern is applied to each line (default true)
 
@@ -128,7 +128,8 @@ class SplitReference(TextReference):
 
         if self.get('splitlines'):
             v = v.splitlines()
-        return '\n'.join(chain(*(re.split(self.get('pattern'), buf, maxsplit=self.get('max')) for buf in v)))
+        return '\n'.join(chain(*(re.split(self.get('pattern'), buf, maxsplit=self.get('max'))
+                                 for buf in v)))
 
 
 class ConcatReference(TextReference):
@@ -181,7 +182,8 @@ class GrepReference(TextReference):
         return ChainMap({'pattern': cls._field('text'),
                          'invert': cls._field('boolean', default=False),
                          'count': cls._field('boolean', default=False),
-                         'onlymatching': cls._field('boolean', default=False, conflicts=['invert', 'count'])},
+                         'onlymatching': cls._field('boolean', default=False,
+                                                    conflicts=['invert', 'count'])},
                         super().fields())
 
     def _line(self, line):
@@ -197,8 +199,8 @@ class GrepReference(TextReference):
         v = super().value
         if v is None:
             return None
-        lines = [l for l in map(self._line, v.splitlines(keepends=True))
-                 if l is not None]
+        lines = [line for line in map(self._line, v.splitlines(keepends=True))
+                 if line is not None]
         if self.get('count'):
             return str(len(lines))
         return ''.join(lines)
@@ -234,5 +236,5 @@ class SubstituteReference(TextReference):
         v = super().value
         if v is None:
             return None
-        return ''.join([l for l in map(self._line, v.splitlines(keepends=True))
-                        if l is not None])
+        return ''.join([line for line in map(self._line, v.splitlines(keepends=True))
+                        if line is not None])

@@ -1,7 +1,7 @@
 
-from .analysis import *
+from .analysis import * # noqa
 from .reductions import Reductions
-from .reference import *
+from .reference import * # noqa
 
 
 __all__ = [

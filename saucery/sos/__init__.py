@@ -5,12 +5,10 @@ import subprocess
 import tarfile
 import tempfile
 
-from collections import ChainMap
 from datetime import datetime
 from functools import cached_property
 from itertools import chain
 from pathlib import Path
-from types import MappingProxyType
 
 from saucery.base import SauceryBase
 from saucery.reduction import Reductions

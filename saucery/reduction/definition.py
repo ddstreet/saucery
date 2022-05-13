@@ -5,11 +5,9 @@ import yaml
 
 from abc import ABC
 from abc import abstractmethod
-from collections import ChainMap
 from collections import UserDict
 from contextlib import suppress
 from functools import cached_property
-from types import MappingProxyType
 
 
 class InvalidDefinitionError(Exception):
@@ -152,7 +150,7 @@ class Definition(ABC, UserDict):
         for field in self.keys():
             for conflict in (self.fields().get(field).conflicts or []):
                 if conflict in self:
-                    self._raise(f"conflicting fields: '{' or '.join(fields)}'")
+                    self._raise(f"conflicting fields: '{field}' and '{conflict}'")
 
 
 class DefinitionField(object):
