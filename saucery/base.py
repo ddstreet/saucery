@@ -18,8 +18,6 @@ from logging import FileHandler
 from logging import Formatter
 from pathlib import Path
 
-from .lookup import ConfigLookup
-
 
 class SauceryBase(ABC):
     LOGGER = logging.getLogger(__name__)
@@ -155,7 +153,7 @@ class SauceryBase(ABC):
     def configsection(self, section):
         with suppress(DuplicateSectionError):
             self.configparser.add_section(section)
-        return ConfigLookup(section, self.configparser[section])
+        return self.configparser[section]
 
     def dumpconfig(self):
         buf = io.StringIO()
@@ -165,9 +163,6 @@ class SauceryBase(ABC):
     @property
     def config(self):
         return self.configsection(self.CONFIG_SECTION())
-
-    def lookup(self, section, initial_keys):
-        return self.configsection(section).lookup(**initial_keys)
 
     @classmethod
     def parse(cls, *, parser=None, actions=None, args=None):

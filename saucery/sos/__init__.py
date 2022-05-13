@@ -23,25 +23,6 @@ __all__ = ['SOS']
 
 
 class SOS(SauceryBase):
-    @classmethod
-    def check(cls, filename):
-        '''Check validity of tar file.
-
-        Raises ValueError if provided filename is not tar file,
-        or if any member of the tar file is absolute or contains
-        "/../" path elements.
-        '''
-        cls.LOGGER.debug(f'Checking tar file {filename}')
-        if not tarfile.is_tarfile(filename):
-            raise ValueError(f'sosreport is not tar: {filename}')
-        try:
-            with tarfile.open(filename) as tar:
-                for name in tar.getnames():
-                    if name.startswith('/') or name.startswith('..') or '/../' in name:
-                        raise ValueError(f'Invalid tar member: {name}')
-        except EOFError:
-            raise ValueError('Invalid/corrupt tarfile')
-
     def __init__(self, *args, sosreport, **kwargs):
         super().__init__(*args, **kwargs)
         self._sosreport = sosreport
@@ -78,11 +59,11 @@ class SOS(SauceryBase):
         return self.sosreport.parent / self.name
 
     case = SOSMetaProperty('case')
+    customer = SOSMetaProperty('customer')
 
     @cached_property
     def meta(self):
-        keys = self.configsection('sosreport_meta').get('lookup_keys', '').split()
-        return SOSMetaDict(self, keys)
+        return SOSMetaDict(self, self.config.get('meta', '').split())
 
     seared = SOSMetaProperty('seared', bool)
     conclusions = SOSMetaProperty('conclusions', 'json')
@@ -115,18 +96,29 @@ class SOS(SauceryBase):
 
         self.seared = False
 
-        initial_keys = {
-            'case': self.case,
-            'sosreport_files': str(self.filesdir),
-        }
-        sosreport_meta = self.lookup('sosreport_meta', initial_keys)
-        if not sosreport_meta:
-            self.LOGGER.error(f'Failed to set sosreport meta: {self.name}')
-            return
-
-        for k, v in sosreport_meta.items():
-            self.meta[k] = v
-        self.LOGGER.info(f'Finished setting sosreport meta: {self.name}')
+        for key in self.meta.keys():
+            if self.meta.get(key) and not resear:
+                self.LOGGER.debug(f"Already have meta '{key}', skipping: {self.name}")
+                continue
+            cmd = self.config.get(f'meta_{key}')
+            if not cmd:
+                self.LOGGER.warning(f"No config for meta '{key}', skipping: {self.name}")
+                continue
+            self.LOGGER.debug(f"Getting meta '{key}': {cmd} {self.filesdir}")
+            try:
+                result = subprocess.run(cmd.split() + [self.filesdir], encoding='utf-8',
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except subprocess.SubprocessException as e:
+                self.LOGGER.exception(f"Error getting meta '{key}': {self.name}: {e}")
+                continue
+            if result.returncode != 0:
+                self.LOGGER.error(f"Error ({result.returncode}) getting meta '{key}': {self.name}")
+                if result.stderr.strip():
+                    self.LOGGER.error(result.stderr)
+                continue
+            self.meta[key] = result.stdout
+            self.LOGGER.info(f"Set meta '{key}': {self.name}")
+        self.LOGGER.info(f'Finished setting meta values: {self.name}')
 
         conclusions = []
         for a in self.reductions.analyses:
@@ -166,12 +158,17 @@ class SOS(SauceryBase):
     def file_bytes(self, filename, **kwargs):
         return self._file_read(filename, 'read_bytes', **kwargs)
 
+    invalid = SOSMetaProperty('invalid', bool)
     extracted = SOSMetaProperty('extracted', bool)
     file_list = SOSMetaProperty('file_list')
     file_count = SOSMetaProperty('file_count', int)
     total_size = SOSMetaProperty('total_size', int)
 
     def extract(self, *, reextract=False):
+        if self.invalid and not reextract:
+            self.LOGGER.error(f'Invalid sosreport, not extracting: {self.name}')
+            return
+
         if self.filesdir.exists():
             if reextract or not self.extracted:
                 partial = '' if self.extracted else 'partial '
@@ -189,24 +186,18 @@ class SOS(SauceryBase):
         if not self.workdir.exists():
             self.workdir.mkdir(parents=False, exist_ok=False)
 
+        self.invalid = False
         self.extracted = False
         file_list = ''
         file_count = 0
         total_size = 0
         try:
             with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
-                with tarfile.open(self.sosreport) as tar:
-                    for m in tar:
-                        if m.isdev():
-                            continue
-                        tar.extract(m, path=tmpdir)
-                        file_list += f'{m.name}\n'
-                        file_count += 1
-                        if m.issym():
-                            continue
+                for m in self._extract_members(tmpdir):
+                    file_list += f'{m.name}\n'
+                    file_count += 1
+                    if not m.issym():
                         total_size += m.size
-                        mode = 0o775 if m.isdir() else 0o664
-                        (Path(tmpdir) / m.name).chmod(mode)
                 topfiles = list(Path(tmpdir).iterdir())
                 if len(topfiles) == 0:
                     raise ValueError(f'No files found in sosreport: {self.name}')
@@ -215,14 +206,31 @@ class SOS(SauceryBase):
                 # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
                 topfiles[0].rename(self.filesdir)
         except Exception as e:
-            self.LOGGER.exception(e)
-            raise
-        finally:
-            self.file_list = file_list
-            self.file_count = file_count
-            self.total_size = total_size
+            self.LOGGER.exception(f'Invalid sosreport, error extracting: {self.sosreport}: {e}')
+            self.invalid = True
+            return
+
+        self.file_list = file_list
+        self.file_count = file_count
+        self.total_size = total_size
         self.LOGGER.info(f'Extracted {file_count} members ({total_size} bytes): {self.filesdir}')
         self.extracted = True
+
+    def _extract_members(self, dest):
+        dest = Path(dest).resolve()
+
+        with tarfile.open(self.sosreport) as tar:
+            for m in tar:
+                mpath = dest.joinpath(m.name).resolve()
+                if m.isdev():
+                    continue
+                if not str(mpath).startswith(str(dest)):
+                    self.LOGGER.warning(f"Invalid member path '{m.name}', skipping: {self.name}")
+                    continue
+                tar.extract(m, path=dest)
+                if not m.issym():
+                    mpath.chmod(0o775 if m.isdir() else 0o664)
+                yield m
 
     @property
     def datetime(self):
@@ -275,7 +283,7 @@ class SOS(SauceryBase):
             'hostname': self.hostname,
             'machineid': self.machineid,
             'case': self.case,
-            'customer': self.meta.get('customer', ''),
+            'customer': self.customer,
             'conclusions': {level: self._conclusions_level_count(level)
                             for level in Analysis.VALID_LEVELS},
         }
