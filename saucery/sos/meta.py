@@ -20,6 +20,7 @@ class SOSMetaProperty(property):
         self.name = name
         self.valuetype = valuetype
         self.valuelist = valuelist
+        self.cache = None
         super().__init__(self.read, self.write, self.unlink)
 
     def path(self, sos):
@@ -40,21 +41,25 @@ class SOSMetaProperty(property):
         return str(value or '')
 
     def read(self, sos):
+        if self.cache is not None:
+            return self.value(self.cache)
         with suppress(FileNotFoundError):
             return self.value(self.path(sos).read_text().strip())
         return self.value('')
 
     def write(self, sos, value):
+        value = self.strvalue(value)
+        if value and '\n' not in value:
+            value += '\n'
+        self.cache = value
         if not sos.dry_run:
-            value = self.strvalue(value)
-            if value and '\n' not in value:
-                value += '\n'
             path = self.path(sos)
             if not path.exists():
                 path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(value)
 
     def unlink(self, sos):
+        self.cache = None
         if not sos.dry_run:
             self.path(sos).unlink(missing_ok=True)
 
