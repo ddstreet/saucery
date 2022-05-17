@@ -1,50 +1,15 @@
 
 server {
-    listen 80 default_server;
+  listen 80 default_server;
 
-    root /saucery;
+  root /saucery;
 
-    server_name saucery;
+  server_name saucery;
 
-    expires 6h;
+  expires 6h;
 
-    location / {
-        # First attempt to serve request as file, then
-        # as directory, then fall back to displaying a 404.
-        try_files $uri $uri/ =404;
-    }
-
-    location /user {
-        # Don't serve saucery user's home dir
-        deny all;
-    }
-
-    location /logs {
-        default_type text/plain;
-        fancyindex on;
-    }
-
-    location /config {
-        default_type text/plain;
-        fancyindex on;
-    }
-
-    location ~ ^/sos/sosreport-[^/]+/.*(?<!/)$ {
-        default_type text/plain;
-        expires 96h;
-    }
-
-    location ~ ^/sos/sosreport-[^/]+/.*(?<=/)$ {
-        if ($arg_format != 'json') {
-            rewrite ^ /web/sos.html last;
-        }
-        autoindex on;
-        autoindex_format json;
-    }
-
-    location = /menu.json {
-        add_header Cache-Control "public, no-cache";
-    }
+  location / {
+    default_type text/plain;
 
     rewrite ^/(favicon\.ico)$              /web/$1               last;
     rewrite ^/$                            /web/index.html       last;
@@ -55,4 +20,46 @@ server {
     rewrite ^/customer/                    /web/customer.html    last;
     rewrite ^/hostname/                    /web/hostname.html    last;
     rewrite ^/machineid/                   /web/machineid.html   last;
+
+    location /user {
+      # Don't serve saucery user's home dir
+      deny all;
+    }
+
+    location /logs {
+      fancyindex on;
+    }
+
+    location /config {
+      fancyindex on;
+    }
+
+    location = /menu.json {
+      add_header Cache-Control "public, no-cache";
+    }
+
+    location /sos/sosreport- {
+      expires 96h;
+
+      if (!-e $request_filename) {
+        return 404;
+      }
+
+      if (-d $request_filename) {
+        rewrite (^.*(?<!/)$) $1/ permanent;
+      }
+
+      if ($arg_format != 'raw') {
+        rewrite ^/sos/sosreport-[^/]+/files/.+(?<!/)$ /web/file.html last;
+      }
+
+      location ~ (?<=/)$ {
+        if ($arg_format != 'json') {
+          rewrite ^ /web/sos.html last;
+        }
+        autoindex on;
+        autoindex_format json;
+      }
+    }
+  }
 }
