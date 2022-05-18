@@ -134,6 +134,10 @@ class SOS(SauceryBase):
     def filesdir(self):
         return self.workdir / 'files'
 
+    @property
+    def linesdir(self):
+        return self.workdir / 'lines'
+
     def file(self, filename, *, command=None):
         d = self.filesdir
         if command:
@@ -176,6 +180,9 @@ class SOS(SauceryBase):
             else:
                 self.LOGGER.info(f'Already extracted, not re-extracting: {self.filesdir}')
                 return
+
+        if self.linesdir.exists() and not self.dry_run:
+            shutil.rmtree(self.linesdir)
 
         self.LOGGER.info(f'Extracting: {self.sosreport.name} -> {self.filesdir}')
         if self.dry_run:
@@ -250,10 +257,10 @@ class SOS(SauceryBase):
             self._process_textfile(dest, m, path)
 
     def _process_textfile(self, dest, m, path):
-        newline_file = dest / Path(m.name).parts[0] / '.newlines' / Path(*Path(m.name).parts[1:])
-        newline_file.parent.mkdir(parents=True, exist_ok=True)
-        newlines = [str(m.start()) for m in re.finditer(b'\n', path.read_bytes())]
-        newline_file.write_text(','.join(newlines))
+        lines_file = self.linesdir / Path(*Path(m.name).parts[1:])
+        lines_file.parent.mkdir(parents=True, exist_ok=True)
+        lines = [m.end() for m in re.finditer(b'^(?!\n)|\n|(?<!\n)$', path.read_bytes())]
+        lines_file.write_text(','.join(map(str, lines)))
 
     @property
     def datetime(self):
