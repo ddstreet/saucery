@@ -1,13 +1,13 @@
 
-function ConclusionsTree(elements) {
-    if (elements.length == 0)
-        return;
+function SetupConclusionsTree() {
+    let tree = $('.ConclusionsTree');
 
-    $.getJSON('conclusions', {'format': 'json'}, (data => PopulateConclusionsTree(data, elements)));
+    if (tree.length > 0)
+        $.getJSON('conclusions', {format: 'json'}, PopulateConclusionsTree);
 }
 
-function PopulateConclusionsTree(data, elements) {
-    let tree = $('<div>');
+function PopulateConclusionsTree(data) {
+    let tree = $('.ConclusionsTree');
     let ul = $('<ul>').appendTo(tree);
     let levels = new Map();
 
@@ -38,5 +38,5 @@ function PopulateConclusionsTree(data, elements) {
                 'icons': false,
             },
         },
-    }).appendTo(elements);
+    });
 }

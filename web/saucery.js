@@ -1,22 +1,17 @@
 
-// service name, e.g. 'sos', 'case', 'customer', 'machineid', 'hostname', etc...
-var SauceryService;
-// service value, e.g. sosreport name for 'sos', case number for 'case', etc...
-var SauceryServiceValue;
-// service path, i.e. any path after key; used mostly for 'sos', e.g. /files/...
-var SauceryServicePath;
+var SauceryParams = new URLSearchParams(window.location.search);
+var SauceryPath = window.location.pathname.split('/');
 
-if (window.location.pathname.endsWith('.html')) {
-    SauceryService = window.location.pathname.split('/').slice(-1)[0].split('.')[0];
-    let value = new URLSearchParams(window.location.search).get(SauceryService).split('/');
-    SauceryServiceValue = value[0];
-    SauceryServicePath = value.slice(1).join('/');
-} else {
-    let path = window.location.pathname.split('/');
-    SauceryService = path[1];
-    SauceryServiceValue = path[2];
-    SauceryServicePath = path.slice(3).join('/');
-}
+// service name, e.g. 'sos', 'case', 'customer', 'machineid', 'hostname', etc...
+var SauceryService = SauceryPath[1];
+// service value, e.g. sosreport name for 'sos', case number for 'case', etc...
+var SauceryServiceValue = SauceryPath[2];
+// service path, i.e. any path after key; used mostly for 'sos', e.g. /files/...
+var SauceryServicePath = SauceryPath.slice(3).join('/');
+// service sub-value, e.g. 'files' for sos-*/files/
+var SaucerySubServiceValue = SauceryPath[3];
+// service sub-path, e.g. path after key/files/
+var SaucerySubServicePath = SauceryPath.slice(4).join('/');
 
 var SauceryMenu = [];
 var SauceryMenuLoaded = $.getJSON('/menu.json', data => SauceryMenu = data);
@@ -73,7 +68,7 @@ function SelectSOSEntries(params={}) {
     if (params.filter)
         filterfunction = params.filter;
     else
-        filterfunction = (entry => encodeURIComponent(entry[params.field || SauceryService]) == (params.value || SauceryServiceValue));
+        filterfunction = (entry => entry[params.field || SauceryService] == decodeURIComponent(params.value || SauceryServiceValue));
 
     anchorFields = params.anchorFields || SauceryAnchorFields;
     anchorFunctions = params.anchorFunctions || SauceryAnchorFunctions;
@@ -96,32 +91,18 @@ function SelectSOSEntries(params={}) {
                 return SauceryAnchor(entry, field, anchorFunctions[field]);
             });
 
-            $('.' + field).append(JoinAnchors(anchors));
+            anchors.slice(1).forEach(a => $('<a>').text(',').insertBefore(a));
+            $('.' + field).append(anchors);
         });
 
-        SauceryTable('.SauceryTable', SOSEntries, tableFields, tableHeaders, anchorFunctions);
-        ConclusionsTree('.ConclusionsTree');
-        FilesTree('.FilesTree');
+        $('.SauceryTable').append(SauceryTable(SOSEntries, tableFields, tableHeaders, anchorFunctions));
     });
 }
 
-function SauceryAnchor(entry, field, anchorFunction) {
-    if (anchorFunction === undefined)
-        anchorFunction = SauceryAnchorFunctions[field];
-
-    return (anchorFunction ?
-            anchorFunction(entry[field], entry) :
-            $('<a>').text(entry[field]));
-}
-
-function SauceryTable(elements,
-                      entries,
+function SauceryTable(entries,
                       fields=SauceryTableFields,
                       headers=SauceryTableHeaders,
                       anchorFunctions=SauceryAnchorFunctions) {
-    if (elements.length == 0)
-        return;
-
     let table = $('<table>');
     let thead = $('<thead>').appendTo(table);
     let tbody = $('<tbody>').appendTo(table);
@@ -140,37 +121,26 @@ function SauceryTable(elements,
         });
     });
 
-    table.appendTo(elements).DataTable({
+    table.DataTable({
         'pageLength': 25,
         'order': [[ 4, 'desc' ], [ 2, 'desc' ]],
     });
+    return table;
 }
 
-function JoinAnchors(anchors, separatortext=', ') {
-    let list = anchors.flatMap(a => [a, $('<a>').text(separatortext)]);
-    list.pop();
-    return list;
+function SauceryAnchor(entry, field, anchorFunction) {
+    if (anchorFunction === undefined)
+        anchorFunction = SauceryAnchorFunctions[field];
+
+    return (anchorFunction ?
+            anchorFunction(entry[field], entry) :
+            $('<a>').text(entry[field]));
 }
 
 function DateToYMD(date) {
     return (String(date.getUTCFullYear()).padStart(4, '0') + '-' +
             String(date.getUTCMonth()+1).padStart(2, '0') + '-' +
             String(date.getUTCDate()).padStart(2, '0'));
-}
-
-function ConclusionsSummary(conclusions) {
-    let p = $('<p>');
-
-    if (conclusions.critical > 0)
-        p.append($('<a>').text('Critical: ' + conclusions.critical).addClass('critical')).append('<br>');
-    if (conclusions.error > 0)
-        p.append($('<a>').text('Error: ' + conclusions.error).addClass('error')).append('<br>');
-    if (conclusions.warning > 0)
-        p.append($('<a>').text('Warning: ' + conclusions.warning).addClass('warning')).append('<br>');
-    if (conclusions.info > 0)
-        p.append($('<a>').text('Info: ' + conclusions.info)).append('<br>');
-
-    return p;
 }
 
 function CreateAnchor(text, href, maxlen) {
@@ -192,4 +162,19 @@ function LimitLength(value, length) {
         v = v + '\u2026';
 
     return v;
+}
+
+function ConclusionsSummary(conclusions) {
+    let p = $('<p>');
+
+    if (conclusions.critical > 0)
+        p.append($('<a>').text('Critical: ' + conclusions.critical).addClass('critical')).append('<br>');
+    if (conclusions.error > 0)
+        p.append($('<a>').text('Error: ' + conclusions.error).addClass('error')).append('<br>');
+    if (conclusions.warning > 0)
+        p.append($('<a>').text('Warning: ' + conclusions.warning).addClass('warning')).append('<br>');
+    if (conclusions.info > 0)
+        p.append($('<a>').text('Info: ' + conclusions.info)).append('<br>');
+
+    return p;
 }
