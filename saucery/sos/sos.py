@@ -8,6 +8,7 @@ import subprocess
 import tarfile
 import tempfile
 
+from collections import defaultdict
 from datetime import datetime
 from functools import cached_property
 from itertools import chain
@@ -131,12 +132,12 @@ class SOS(SauceryBase):
         self.seared = True
 
     @property
-    def filesdir(self):
-        return self.workdir / 'files'
-
-    @property
     def linesdir(self):
         return self.workdir / 'lines'
+
+    @property
+    def filesdir(self):
+        return self.workdir / 'files'
 
     def file(self, filename, *, command=None):
         d = self.filesdir
@@ -195,72 +196,84 @@ class SOS(SauceryBase):
         total_size = 0
         self.invalid = False
         self.extracted = False
+        members = defaultdict(list)
         try:
             with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
+                top = None
                 dest = Path(tmpdir).resolve()
                 with tarfile.open(self.sosreport) as tar:
                     for m in tar:
-                        if self._extract_member(tar, dest, m):
-                            file_list.append('/'.join(m.name.split('/')[1:]))
-                            total_size += m.size
-                topfiles = list(dest.iterdir())
-                if len(topfiles) == 0:
-                    raise ValueError(f'No files found in sosreport: {self.name}')
-                if len(topfiles) > 1:
-                    raise ValueError(f'sosreport contains multiple top-level dirs: {self.name}')
+                        topdir = m.name.split('/')[0]
+                        if not top:
+                            top = topdir
+                        elif top != topdir:
+                            raise ValueError(f'Multiple top-level dirs: {top}, {topdir}')
+                        self._extract_member(tar, dest, m, members)
+                if not top:
+                    raise ValueError(f'No files found in sosreport')
                 # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
-                topfiles[0].rename(self.filesdir)
+                dest.joinpath(top).rename(self.filesdir)
         except Exception as e:
             self.LOGGER.error(f'Invalid sosreport, error extracting: {self.sosreport}: {e}')
             self.LOGGER.exception(e)
             self.invalid = True
             return
 
-        self.file_list = '\n'.join(file_list + [''])
-        self.file_count = len(file_list)
-        self.total_size = total_size
+        self.file_list = '\n'.join(members['file']) + '\n'
+        self.file_count = len(members['file'])
+        self.total_size = sum(members['size'])
 
         self.LOGGER.info(f'Extracted {self.file_count} members '
                          f'({self.total_size} bytes): {self.filesdir}')
         self.extracted = True
 
-    def _extract_member(self, tar, dest, m):
-        path = dest / m.name
-        if not str(path.resolve()).startswith(str(dest)):
+    def _extract_member(self, tar, dest, m, members):
+        path = dest.joinpath(m.name).resolve()
+        mname = '/'.join(m.name.split('/')[1:])
+        if not str(path).startswith(str(dest)):
             self.LOGGER.warning(f"Skipping invalid member path '{m.name}': {self.name}")
+            mtype = 'invalid'
         elif m.isdir():
             path.mkdir(mode=0o775)
+            mtype = 'dir'
         elif getattr(m, 'linkname', None):
             if not str(path.parent.joinpath(m.linkname).resolve()).startswith(str(dest)):
                 self.LOGGER.warning(f"Skipping invalid file '{m.name}' "
                                     f"link path '{m.linkname}': {self.name}")
             path.symlink_to(m.linkname)
+            mtype = 'link'
+            lines_path = self.linesdir / mname
+            lines_path.parent.mkdir(parents=True, exist_ok=True)
+            lines_path.symlink_to(m.linkname)
         elif m.ischr():
             self.LOGGER.debug(f"Ignoring char node '{m.name}': {self.name}")
+            mtype = 'chr'
         elif m.isblk():
             self.LOGGER.debug(f"Ignoring block node '{m.name}': {self.name}")
+            mtype = 'blk'
         elif m.isfifo():
             self.LOGGER.debug(f"Ignoring fifo node '{m.name}': {self.name}")
+            mtype = 'fifo'
         elif m.isfile():
-            self._extract_file(tar, dest, m, path)
-            return True
+            tar.extract(m, path=dest)
+            mode = path.stat().st_mode
+            path.chmod(mode | 0o644)
+            mtype = 'file'
+            members['size'].append(m.size)
+            filetype = magic.from_file(str(path), mime=True)
+            members['filetype'] = set(members['filetype']) | set((filetype,))
+            if filetype.startswith('text'):
+                self._detect_newlines(path, mname)
         else:
             self.LOGGER.debug(f"Ignoring unknown type '{m.type}' member '{m.name}': {self.name}")
-        return False
+            mtype = 'unknown'
+        members[mtype].append(mname)
 
-    def _extract_file(self, tar, dest, m, path):
-        tar.extract(m, path=dest)
-        mode = path.stat().st_mode
-        path.chmod(mode | 0o644)
-        filetype = magic.from_file(str(path), mime=True)
-        if filetype.startswith('text'):
-            self._process_textfile(dest, m, path)
-
-    def _process_textfile(self, dest, m, path):
-        lines_file = self.linesdir / Path(*Path(m.name).parts[1:])
-        lines_file.parent.mkdir(parents=True, exist_ok=True)
-        lines = [m.end() for m in re.finditer(b'^(?!\n)|\n|(?<!\n)$', path.read_bytes())]
-        lines_file.write_text(','.join(map(str, lines)))
+    def _detect_newlines(self, path, name):
+        lines = [newline.end() for newline in re.finditer(b'^|\n|(?<!\n)$', path.read_bytes())]
+        lines_path = self.linesdir / name
+        lines_path.parent.mkdir(parents=True, exist_ok=True)
+        lines_path.write_text(','.join(map(str, lines)))
 
     @property
     def datetime(self):
