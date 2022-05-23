@@ -1,20 +1,25 @@
 
+$(FilesTree);
+
 function FilesTree() {
-    let div = $('<div>');
+    let filestree = $('.FilesTree');
+    if (!filestree.length)
+        return;
+
     let sospath = SauceryServicePath.split('/').filter(p => p).reverse();
 
     if (sospath.length == 0) {
-        return $('<a>').attr('href', 'files').text('files');
+        $('<a>').attr('href', 'files').text('files').appendTo(filestree);
+        return;
     }
 
     let href = '';
-    let anchors = sospath.map(function (name) {
+    let anchors = sospath.flatMap(function (name) {
         let a = $('<a>').attr('href', href).text(name);
         href = href + '../';
-        return a;
-    }).reverse();
-    anchors.slice(1).forEach(a => $('<a>').text('/').insertBefore(a));
-    $('<div>').append(anchors).appendTo(div);
+        return [a, $('<a>').text('/')];
+    }).slice(0, -1).reverse();
+    $('<div>').append(anchors).appendTo(filestree);
 
     let jstree_data = function (obj, callback) {
         let path = this.get_path(obj, '/') || '';
@@ -34,7 +39,7 @@ function FilesTree() {
         });
     };
 
-    $('<div>').appendTo(div).jstree({'core': {'data': jstree_data}})
-        .on('select_node.jstree', (evt, data) => window.location = data.node.original.href);
-    return div;
+    $('<div>').jstree({'core': {'data': jstree_data}})
+        .on('select_node.jstree', (evt, data) => window.location = data.node.original.href)
+        .appendTo(filestree);
 }
