@@ -25,7 +25,6 @@ class SauceryBase(ABC):
                                  r'\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
     DEFAULT_SAUCERY_DIR = '/saucery'
     DEFAULT_CONFIG_FILE = 'saucery.conf'
-    DEFAULTS = {}
 
     @classmethod
     def CONFIG_SECTION(cls):
@@ -72,7 +71,7 @@ class SauceryBase(ABC):
 
     @cached_property
     def configparser(self):
-        configparser = ConfigParser(defaults=self.DEFAULTS)
+        configparser = ConfigParser()
         configparser.read(self.configfiles)
         return configparser
 
