@@ -2,8 +2,10 @@
 
 import json
 import logging
+import os
 import tempfile
 
+from collections import ChainMap
 from functools import cached_property
 from pathlib import Path
 
@@ -16,6 +18,13 @@ LOGGER = logging.getLogger(__name__)
 
 class Saucery(SauceryBase):
     DEFAULT_SAUCERY_DIR = '/saucery'
+
+    @property
+    def environconfig(self):
+        # Special case for simple 'SAUCERY' in env; use that for saucerydir
+        return ChainMap(super().environconfig,
+                        {k.lower(): v for k, v in os.environ.items()
+                         if k == 'SAUCERY'})
 
     @property
     def defaultconfig(self):

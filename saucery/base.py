@@ -71,8 +71,16 @@ class SauceryBase(ABC):
     @cached_property
     def config(self):
         return ChainMap(self.kwargs,
+                        self.environconfig,
                         self.configsection(self.CONFIG_SECTION()),
                         self.defaultconfig)
+
+    @property
+    def environconfig(self):
+        prefix = 'SAUCERY_'
+        plen = len(prefix)
+        return {k[plen:].lower(): v for k, v in os.environ.items()
+                if k.startswith(prefix) and len(k) > plen}
 
     @property
     def defaultconfig(self):
