@@ -15,6 +15,21 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Saucery(SauceryBase):
+    DEFAULT_SAUCERY_DIR = '/saucery'
+
+    @property
+    def defaultconfig(self):
+        return {'saucery': self.DEFAULT_SAUCERY_DIR}
+
+    @property
+    def saucerydir(self):
+        path = Path(self.config.get('saucery'))
+        if not path.exists():
+            raise ValueError(f'Saucery location does not exist, please create it: {path}')
+        if not path.is_dir():
+            raise ValueError(f'Saucery location is not a dir, please fix: {path}')
+        return path
+
     @cached_property
     def sosdir(self):
         path = self.saucerydir / 'sos'

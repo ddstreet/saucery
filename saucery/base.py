@@ -19,9 +19,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SauceryBase(ABC):
-    DEFAULT_SAUCERY_DIR = '/saucery'
-    DEFAULT_CONFIG_FILE = 'saucery.conf'
-
     @classmethod
     def CONFIG_SECTION(cls):
         return cls.__name__.lower()
@@ -43,23 +40,13 @@ class SauceryBase(ABC):
         self.kwargs = kwargs
 
     @property
-    def saucerydir(self):
-        path = Path(self.kwargs.get('saucery') or self.DEFAULT_SAUCERY_DIR)
-        if not path.exists():
-            raise ValueError(f'Saucery location does not exist, please create it: {path}')
-        if not path.is_dir():
-            raise ValueError(f'Saucery location is not a dir, please fix: {path}')
-        return path
-
-    @property
     def configfiles(self):
         xdg_config_home = os.getenv('XDG_CONFIG_HOME', '~/.config')
-        usercfgdir = Path(xdg_config_home).expanduser().resolve() / 'saucery'
-        files = [Path(f).expanduser()
-                 for f in [self.DEFAULT_CONFIG_FILE, self.kwargs.get('configfile')]
-                 if f]
-        dirs = [self.saucerydir / 'config', usercfgdir]
-        return [d / f for d in dirs for f in files]
+        files = [Path(xdg_config_home).expanduser().resolve() / 'saucery' / 'saucery.conf']
+        customcfg = self.kwargs.get('configfile')
+        if customcfg:
+            files.append(Path(customcfg).expanduser().resolve())
+        return files
 
     @property
     def dry_run(self):
@@ -82,6 +69,12 @@ class SauceryBase(ABC):
         self.configparser.write(buf)
         return buf.getvalue()
 
-    @property
+    @cached_property
     def config(self):
-        return self.configsection(self.CONFIG_SECTION())
+        return ChainMap(self.kwargs,
+                        self.configsection(self.CONFIG_SECTION()),
+                        self.defaultconfig)
+
+    @property
+    def defaultconfig(self):
+        return {}
