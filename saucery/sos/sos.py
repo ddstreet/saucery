@@ -42,6 +42,10 @@ class SOS(SauceryBase):
     def __repr__(self):
         return str(self.sosreport)
 
+    @property
+    def defaultconfig(self):
+        return {'reductions': str(self.saucerydir / 'reductions')}
+
     @cached_property
     def sosreport(self):
         return Path(self._sosreport).resolve()
@@ -310,7 +314,7 @@ class SOS(SauceryBase):
 
     @property
     def reductionsdir(self):
-        return self.kwargs.get('reductions', self.config.get('reductions'))
+        return self.config.get('reductions')
 
     @cached_property
     def reductions(self):
