@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import json
 import magic
 import re
 import shutil
@@ -192,8 +191,6 @@ class SOS(SauceryBase):
         if not self.workdir.exists():
             self.workdir.mkdir(parents=False, exist_ok=False)
 
-        file_list = []
-        total_size = 0
         self.invalid = False
         self.extracted = False
         members = defaultdict(list)
@@ -210,7 +207,7 @@ class SOS(SauceryBase):
                             raise ValueError(f'Multiple top-level dirs: {top}, {topdir}')
                         self._extract_member(tar, dest, m, members)
                 if not top:
-                    raise ValueError(f'No files found in sosreport')
+                    raise ValueError('No files found in sosreport')
                 # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
                 dest.joinpath(top).rename(self.filesdir)
         except Exception as e:
