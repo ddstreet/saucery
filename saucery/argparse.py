@@ -5,6 +5,9 @@ import logging
 from . import Saucery
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class SauceryArgumentParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -37,7 +40,11 @@ class SauceryArgumentParser(argparse.ArgumentParser):
         opts.has_action = any([bool(getattr(opts, attr)) for attr in self.action_attrs])
 
         logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
-        logging.getLogger(__name__).debug(f'params: {vars(opts)}')
+
+        LOGGER.debug(f'params: {vars(opts)}')
+
+        if opts.dry_run:
+            LOGGER.info('DRY-RUN mode')
 
         return opts
 

@@ -13,13 +13,13 @@ from contextlib import suppress
 from datetime import datetime
 from functools import cached_property
 from functools import lru_cache
-from logging import FileHandler
-from logging import Formatter
 from pathlib import Path
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class SauceryBase(ABC):
-    LOGGER = logging.getLogger(__name__)
     SOSREPORT_REGEX = re.compile(r'(?i)'
                                  r'(?P<name>sosreport-(?P<hostname>.+?)(?:-(?P<case>\d+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<hash>\w{7}))?)' # noqa
                                  r'\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
@@ -46,8 +46,6 @@ class SauceryBase(ABC):
             setattr(self, f'_{instance.__class__.__name__}', instance)
             kwargs = ChainMap(kwargs, instance.kwargs)
         self.kwargs = kwargs
-        self.setup_logging()
-        self.log_dry_run()
 
     @property
     def saucerydir(self):
@@ -71,76 +69,6 @@ class SauceryBase(ABC):
     @property
     def dry_run(self):
         return self.kwargs.get('dry_run', False)
-
-    LOGGED_DRY_RUN = False
-
-    def log_dry_run(self):
-        if SauceryBase.LOGGED_DRY_RUN:
-            return
-        SauceryBase.LOGGED_DRY_RUN = True
-        if self.dry_run:
-            msg = 'DRY-RUN mode'
-            if int(self.dry_run or 0) > 1:
-                msg += ' (NO file logging)'
-            elif self.kwargs.get('logname'):
-                msg += ' (with file logging)'
-            self.LOGGER.info(msg)
-
-    LOGGING_SETUP = False
-
-    def setup_logging(self):
-        if SauceryBase.LOGGING_SETUP:
-            return
-        SauceryBase.LOGGING_SETUP = True
-        name = self.kwargs.get('logname')
-        if not name:
-            return
-        if int(self.dry_run or 0) > 1:
-            return
-        formatter = self._log_fmt()
-        permanent = self._permanent_log_handler(name)
-        timestamped = self._timestamped_log_handler(name)
-        if permanent:
-            if formatter:
-                permanent.setFormatter(formatter)
-            logging.getLogger().addHandler(permanent)
-        if timestamped:
-            if formatter:
-                timestamped.setFormatter(formatter)
-            logging.getLogger().addHandler(timestamped)
-
-    def _log_path(self, key, name):
-        path = self.configsection('logging').get(key)
-        if not path:
-            return None
-        path = Path(path)
-        if not path.exists():
-            path.mkdir()
-        path = path / name
-        if not path.suffix:
-            path = path.with_suffix('.txt')
-        return path
-
-    def _log_fmt(self):
-        fmt = self.configsection('logging').get('fmt')
-        if not fmt:
-            return None
-        datefmt = self.configsection('logging').get('datefmt')
-        return Formatter(fmt=fmt, datefmt=datefmt)
-
-    def _permanent_log_handler(self, name):
-        path = self._log_path('permanent_path', name)
-        if not path:
-            return None
-        return FileHandler(path, mode='a', encoding='utf-8', delay=True)
-
-    def _timestamped_log_handler(self, name):
-        path = self._log_path('timestamped_path', name)
-        if not path:
-            return None
-        suffix = path.suffix
-        path = path.with_suffix(f'.{datetime.now().isoformat()}{suffix}')
-        return FileHandler(path, mode='w', encoding='utf-8', delay=True)
 
     @cached_property
     def configparser(self):

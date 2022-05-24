@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import json
+import logging
 import tempfile
 
 from functools import cached_property
@@ -8,6 +9,9 @@ from pathlib import Path
 
 from saucery.base import SauceryBase
 from saucery.sos import SOS
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Saucery(SauceryBase):
@@ -45,7 +49,7 @@ class Saucery(SauceryBase):
         return SOS(instance=self, sosreport=path)
 
     def update_menu(self):
-        self.LOGGER.info(f'Creating JSON index {self.menu}')
+        LOGGER.info(f'Creating JSON index {self.menu}')
         if self.dry_run:
             return
 

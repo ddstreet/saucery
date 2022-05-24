@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import logging
 import os
 
 from concurrent import futures
@@ -8,6 +9,9 @@ from pathlib import Path
 
 from saucery.base import SauceryBase
 from saucery.sos import SOS
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Saucier(SauceryBase):
@@ -26,7 +30,7 @@ class Saucier(SauceryBase):
             try:
                 soses.append(self.sosreport(s))
             except ValueError as e:
-                self.LOGGER.info(e)
+                LOGGER.info(e)
         return soses
 
     def _parallel(self, sosreports, action, parallel=True):

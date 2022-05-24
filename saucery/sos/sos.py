@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import logging
 import magic
 import re
 import shutil
@@ -18,6 +19,9 @@ from saucery.reduction import Reductions
 from saucery.reduction.analysis.analysis import Analysis
 from .meta import SOSMetaDict
 from .meta import SOSMetaProperty
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SOS(SauceryBase):
@@ -68,26 +72,26 @@ class SOS(SauceryBase):
 
     def sear(self, resear=False):
         if not self.filesdir.exists() or not self.extracted:
-            self.LOGGER.error(f"Not extracted, can't sear: {self.name}")
+            LOGGER.error(f"Not extracted, can't sear: {self.name}")
             return
 
         if not self.case:
             filename_case = self._sosreport_match.group('case')
             if filename_case:
-                self.LOGGER.info(f'Setting case to {filename_case} based on filename: {self.name}')
+                LOGGER.info(f'Setting case to {filename_case} based on filename: {self.name}')
                 self.case = filename_case
             else:
-                self.LOGGER.error(f"Case unset and not in filename, can't sear: {self.name}")
+                LOGGER.error(f"Case unset and not in filename, can't sear: {self.name}")
                 return
 
         if self.seared:
             if resear:
-                self.LOGGER.info(f'Re-searing {self.name}')
+                LOGGER.info(f'Re-searing {self.name}')
             else:
-                self.LOGGER.info(f'Already seared, not re-searing {self.name}')
+                LOGGER.info(f'Already seared, not re-searing {self.name}')
                 return
         else:
-            self.LOGGER.info(f'Searing {self.name}')
+            LOGGER.info(f'Searing {self.name}')
 
         if self.dry_run:
             return
@@ -96,37 +100,37 @@ class SOS(SauceryBase):
 
         for key in self.meta.keys():
             if self.meta.get(key) and not resear:
-                self.LOGGER.debug(f"Already have meta '{key}', skipping: {self.name}")
+                LOGGER.debug(f"Already have meta '{key}', skipping: {self.name}")
                 continue
             cmd = self.config.get(f'meta_{key}')
             if not cmd:
-                self.LOGGER.warning(f"No config for meta '{key}', skipping: {self.name}")
+                LOGGER.warning(f"No config for meta '{key}', skipping: {self.name}")
                 continue
-            self.LOGGER.debug(f"Getting meta '{key}': {cmd} {self.filesdir}")
+            LOGGER.debug(f"Getting meta '{key}': {cmd} {self.filesdir}")
             try:
                 result = subprocess.run(cmd.split() + [self.filesdir], encoding='utf-8',
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except subprocess.SubprocessException:
-                self.LOGGER.exception(f"Error getting meta '{key}': {self.name}")
+                LOGGER.exception(f"Error getting meta '{key}': {self.name}")
                 continue
             if result.returncode != 0:
-                self.LOGGER.error(f"Error ({result.returncode}) getting meta '{key}': {self.name}")
+                LOGGER.error(f"Error ({result.returncode}) getting meta '{key}': {self.name}")
                 if result.stderr.strip():
-                    self.LOGGER.error(result.stderr)
+                    LOGGER.error(result.stderr)
                 continue
             self.meta[key] = result.stdout
-            self.LOGGER.info(f"Set meta '{key}': {self.name}")
-        self.LOGGER.info(f'Finished setting meta values: {self.name}')
+            LOGGER.info(f"Set meta '{key}': {self.name}")
+        LOGGER.info(f'Finished setting meta values: {self.name}')
 
         conclusions = []
         for a in self.reductions.analyses:
-            self.LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
+            LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
             try:
                 conclusions.append(dict(a.conclusion))
             except Exception:
-                self.LOGGER.exception(f'Analysis {a.name} failed, skipping')
+                LOGGER.exception(f'Analysis {a.name} failed, skipping')
         self.conclusions = conclusions
-        self.LOGGER.info(f'Finished analysing sosreport: {self.name}')
+        LOGGER.info(f'Finished analysing sosreport: {self.name}')
 
         self.seared = True
 
@@ -168,23 +172,23 @@ class SOS(SauceryBase):
 
     def extract(self, *, reextract=False):
         if self.invalid and not reextract:
-            self.LOGGER.error(f'Invalid sosreport, not extracting: {self.name}')
+            LOGGER.error(f'Invalid sosreport, not extracting: {self.name}')
             return
 
         if self.filesdir.exists():
             if reextract or not self.extracted:
                 partial = '' if self.extracted else 'partial '
-                self.LOGGER.info(f'Removing existing {partial}data at {self.filesdir}')
+                LOGGER.info(f'Removing existing {partial}data at {self.filesdir}')
                 if not self.dry_run:
                     shutil.rmtree(self.filesdir)
             else:
-                self.LOGGER.info(f'Already extracted, not re-extracting: {self.filesdir}')
+                LOGGER.info(f'Already extracted, not re-extracting: {self.filesdir}')
                 return
 
         if self.linesdir.exists() and not self.dry_run:
             shutil.rmtree(self.linesdir)
 
-        self.LOGGER.info(f'Extracting: {self.sosreport.name} -> {self.filesdir}')
+        LOGGER.info(f'Extracting: {self.sosreport.name} -> {self.filesdir}')
         if self.dry_run:
             return
 
@@ -211,8 +215,8 @@ class SOS(SauceryBase):
                 # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
                 dest.joinpath(top).rename(self.filesdir)
         except Exception as e:
-            self.LOGGER.error(f'Invalid sosreport, error extracting: {self.sosreport}: {e}')
-            self.LOGGER.exception(e)
+            LOGGER.error(f'Invalid sosreport, error extracting: {self.sosreport}: {e}')
+            LOGGER.exception(e)
             self.invalid = True
             return
 
@@ -220,7 +224,7 @@ class SOS(SauceryBase):
         self.file_count = len(members['file'])
         self.total_size = sum(members['size'])
 
-        self.LOGGER.info(f'Extracted {self.file_count} members '
+        LOGGER.info(f'Extracted {self.file_count} members '
                          f'({self.total_size} bytes): {self.filesdir}')
         self.extracted = True
 
@@ -228,14 +232,14 @@ class SOS(SauceryBase):
         path = dest.joinpath(m.name).resolve()
         mname = '/'.join(m.name.split('/')[1:])
         if not str(path).startswith(str(dest)):
-            self.LOGGER.warning(f"Skipping invalid member path '{m.name}': {self.name}")
+            LOGGER.warning(f"Skipping invalid member path '{m.name}': {self.name}")
             mtype = 'invalid'
         elif m.isdir():
             path.mkdir(mode=0o775)
             mtype = 'dir'
         elif getattr(m, 'linkname', None):
             if not str(path.parent.joinpath(m.linkname).resolve()).startswith(str(dest)):
-                self.LOGGER.warning(f"Skipping invalid file '{m.name}' "
+                LOGGER.warning(f"Skipping invalid file '{m.name}' "
                                     f"link path '{m.linkname}': {self.name}")
             path.symlink_to(m.linkname)
             mtype = 'link'
@@ -243,13 +247,13 @@ class SOS(SauceryBase):
             lines_path.parent.mkdir(parents=True, exist_ok=True)
             lines_path.symlink_to(m.linkname)
         elif m.ischr():
-            self.LOGGER.debug(f"Ignoring char node '{m.name}': {self.name}")
+            LOGGER.debug(f"Ignoring char node '{m.name}': {self.name}")
             mtype = 'chr'
         elif m.isblk():
-            self.LOGGER.debug(f"Ignoring block node '{m.name}': {self.name}")
+            LOGGER.debug(f"Ignoring block node '{m.name}': {self.name}")
             mtype = 'blk'
         elif m.isfifo():
-            self.LOGGER.debug(f"Ignoring fifo node '{m.name}': {self.name}")
+            LOGGER.debug(f"Ignoring fifo node '{m.name}': {self.name}")
             mtype = 'fifo'
         elif m.isfile():
             tar.extract(m, path=dest)
@@ -262,7 +266,7 @@ class SOS(SauceryBase):
             if filetype.startswith('text'):
                 self._detect_newlines(path, mname)
         else:
-            self.LOGGER.debug(f"Ignoring unknown type '{m.type}' member '{m.name}': {self.name}")
+            LOGGER.debug(f"Ignoring unknown type '{m.type}' member '{m.name}': {self.name}")
             mtype = 'unknown'
         members[mtype].append(mname)
 
@@ -319,7 +323,7 @@ class SOS(SauceryBase):
 
     @property
     def json(self):
-        self.LOGGER.debug(f'Generating JSON for {self.name}')
+        LOGGER.debug(f'Generating JSON for {self.name}')
         return {
             'name': self.name,
             'sosreport': self.sosreport.name,
