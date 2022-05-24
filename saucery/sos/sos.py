@@ -25,12 +25,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SOS(SauceryBase):
+    FILENAME_REGEX = re.compile(r'(?i)'
+                                r'(?P<name>sosreport-(?P<hostname>.+?)(?:-(?P<case>\d+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<hash>\w{7}))?)' # noqa
+                                r'\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
+
     def __init__(self, *args, sosreport, **kwargs):
         super().__init__(*args, **kwargs)
         self._sosreport = sosreport
 
         # Require sanely named sosreport
-        self._sosreport_match = self.SOSREPORT_REGEX.match(self.sosreport.name)
+        self._sosreport_match = self.FILENAME_REGEX.match(self.sosreport.name)
         if not self._sosreport_match:
             raise ValueError(f"Invalid sosreport name '{self.sosreport.name}'")
 

@@ -3,7 +3,6 @@
 import io
 import logging
 import os
-import re
 
 from abc import ABC
 from collections import ChainMap
@@ -20,9 +19,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SauceryBase(ABC):
-    SOSREPORT_REGEX = re.compile(r'(?i)'
-                                 r'(?P<name>sosreport-(?P<hostname>.+?)(?:-(?P<case>\d+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<hash>\w{7}))?)' # noqa
-                                 r'\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
     DEFAULT_SAUCERY_DIR = '/saucery'
     DEFAULT_CONFIG_FILE = 'saucery.conf'
 
