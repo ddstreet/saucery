@@ -24,16 +24,11 @@ def main(args=None):
                         help='Run actions in this many threads (0: #cpus, default: 0)')
 
     actions = parser.add_mutually_exclusive_group()
-    actions.add_argument('-s', '--shop', action='store_true',
-                         help='Shop for (download) new sosreports')
     actions.add_argument('sosreport', nargs='*', default=[],
                          help='Act on specific sosreports (implies --force)')
     (saucier, opts) = Saucier.parse(parser=parser, actions=actions, args=args)
 
-    if opts.shop:
-        sosreports = [saucier.buy(s) for s in saucier.browse(max_age=opts.max_age)]
-    else:
-        sosreports = opts.sosreport or saucier.sosreports
+    sosreports = opts.sosreport or saucier.sosreports
 
     if opts.threads == 0:
         parallel = True
