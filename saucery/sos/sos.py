@@ -229,7 +229,7 @@ class SOS(SauceryBase):
         self.total_size = sum(members['size'])
 
         LOGGER.info(f'Extracted {self.file_count} members '
-                         f'({self.total_size} bytes): {self.filesdir}')
+                    f'({self.total_size} bytes): {self.filesdir}')
         self.extracted = True
 
     def _extract_member(self, tar, dest, m, members):
@@ -244,7 +244,7 @@ class SOS(SauceryBase):
         elif getattr(m, 'linkname', None):
             if not str(path.parent.joinpath(m.linkname).resolve()).startswith(str(dest)):
                 LOGGER.warning(f"Skipping invalid file '{m.name}' "
-                                    f"link path '{m.linkname}': {self.name}")
+                               f"link path '{m.linkname}': {self.name}")
             path.symlink_to(m.linkname)
             mtype = 'link'
             lines_path = self.linesdir / mname

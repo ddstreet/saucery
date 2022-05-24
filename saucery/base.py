@@ -9,7 +9,6 @@ from collections import ChainMap
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from contextlib import suppress
-from datetime import datetime
 from functools import cached_property
 from functools import lru_cache
 from pathlib import Path
