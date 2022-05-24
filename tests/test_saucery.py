@@ -8,6 +8,7 @@ from saucery import Saucery
 
 
 TEST_DATA_PATH = Path(__file__).parent / 'saucery_data'
+TEST_REDUCTIONS_PATH = Path(__file__).parent.parent / 'reductions'
 TEST_SOS = 'sosreport-sosreport-f-123456-2022-05-23-qcpndam.tar.xz'
 
 
@@ -15,7 +16,7 @@ class SauceryTest(unittest.TestCase):
     def setUp(self):
         self.testdir = tempfile.TemporaryDirectory()
         saucery = shutil.copytree(TEST_DATA_PATH, Path(self.testdir.name) / 'saucery')
-        self.saucery = Saucery(saucery=saucery)
+        self.saucery = Saucery(saucery=saucery, reductions=TEST_REDUCTIONS_PATH)
 
     def tearDown(self):
         self.testdir.cleanup()

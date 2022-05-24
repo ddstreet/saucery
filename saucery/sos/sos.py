@@ -299,9 +299,13 @@ class SOS(SauceryBase):
     def machineid(self):
         return self.file_text('etc/machine-id')
 
+    @property
+    def reductionsdir(self):
+        return self.kwargs.get('reductions', self.config.get('reductions'))
+
     @cached_property
     def reductions(self):
-        return Reductions(self, self.config.get('reductions'))
+        return Reductions(self, self.reductionsdir)
 
     def _conclusions_level_count(self, level):
         level = level.lower()
