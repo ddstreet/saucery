@@ -14,9 +14,10 @@ from functools import cached_property
 from itertools import chain
 from pathlib import Path
 
-from saucery.base import SauceryBase
-from saucery.reduction import Reductions
-from saucery.reduction.analysis.analysis import Analysis
+from ..base import SauceryBase
+from ..reduction import Reductions
+from ..reduction.analysis.analysis import Analysis
+
 from .meta import SOSMetaDict
 from .meta import SOSMetaProperty
 

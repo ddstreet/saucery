@@ -7,8 +7,8 @@ from datetime import datetime
 from functools import cached_property
 from itertools import chain
 
-from saucery.reduction.definition import Definition
-from saucery.reduction.definition import InvalidDefinitionError
+from ..definition import Definition
+from ..definition import InvalidDefinitionError
 
 from .compare import DictComparison
 from .compare import NumberGeComparison

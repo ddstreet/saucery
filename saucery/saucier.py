@@ -7,8 +7,8 @@ from concurrent import futures
 from functools import partial
 from pathlib import Path
 
-from saucery.base import SauceryBase
-from saucery.sos import SOS
+from .base import SauceryBase
+from .sos import SOS
 
 
 LOGGER = logging.getLogger(__name__)

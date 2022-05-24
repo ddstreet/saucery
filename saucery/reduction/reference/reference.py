@@ -9,8 +9,8 @@ from functools import cached_property
 from itertools import chain
 from pathlib import Path
 
-from saucery.reduction.definition import Definition
-from saucery.reduction.definition import InvalidDefinitionError
+from ..definition import Definition
+from ..definition import InvalidDefinitionError
 
 
 __all__ = [

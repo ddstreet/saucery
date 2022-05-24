@@ -8,7 +8,7 @@ from contextlib import suppress
 from functools import cached_property
 from functools import lru_cache
 
-from saucery.reduction.definition import InvalidDefinitionError
+from ..definition import InvalidDefinitionError
 
 
 class InvalidComparisonError(InvalidDefinitionError):
