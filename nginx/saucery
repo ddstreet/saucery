@@ -26,14 +26,6 @@ server {
       deny all;
     }
 
-    location /logs {
-      fancyindex on;
-    }
-
-    location /config {
-      fancyindex on;
-    }
-
     location = /menu.json {
       add_header Cache-Control "public, no-cache";
     }
