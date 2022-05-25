@@ -25,6 +25,6 @@ To set up the web UI:
 You should now be able to point a web browser at your system and view the Saucery contents.
 
 To use Saucery, add sosreport(s) to ~/saucery/sos. Then run the 'saucier' script to extract,
-sear (process), and create a 'menu'; you can do all at once with:
+'sear' (process), and create a 'menu' (index for web ui); you can do all at once with:
 
 $ saucier -ESM
