@@ -1,0 +1,30 @@
+
+For basic local development setup:
+
+1) mkdir -p ~/saucery/sos
+2) set SAUCERY in your env to ~/saucery
+3) get the path to the 'reductions' dir in your git checkout, and do EITHER:
+  a) symlink ~/saucery/reductions to it
+  b) set SAUCERY_REDUCTIONS in your env to it
+4) add the git checkout 'scripts' dir to your PATH
+
+You can now use the 'saucier' command to manage sosreports placed in the
+~/saucery/sos dir.
+
+To set up the web UI:
+
+1) install nginx
+2) remove any default config in /etc/nginx/sites-enabled/
+3) symlink, or copy, the git checkout 'nginx/saucery' file to /etc/nginx/sites-enabled
+4) do EITHER:
+  a) edit the /etc/nginx/sites-enabled/saucery file to change the 'root' to your ~/saucery dir
+  b) create a symlink at /saucery to your ~/saucery dir
+5) symlink, or copy, the git checkout 'web' dir to ~/saucery/web
+6) restart nginx
+
+You should now be able to point a web browser at your system and view the Saucery contents.
+
+To use Saucery, add sosreport(s) to ~/saucery/sos. Then run the 'saucier' script to extract,
+sear (process), and create a 'menu'; you can do all at once with:
+
+$ saucier -ESM
