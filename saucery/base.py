@@ -33,6 +33,7 @@ class SauceryBase(ABC):
 
     def __init__(self, *, instance=None, **kwargs):
         super().__init__()
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
         if instance:
             setattr(self, f'_{instance.__class__.__name__}', instance)
             kwargs = ChainMap(kwargs, instance.kwargs)
