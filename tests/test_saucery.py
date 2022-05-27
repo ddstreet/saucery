@@ -26,9 +26,9 @@ class SauceryTest(unittest.TestCase):
         sos = self.saucery.sosreports[0]
         self.assertFalse(sos.extracted)
         self.assertFalse(sos.invalid)
-        self.assertFalse(sos.seared)
+        self.assertFalse(sos.analysed)
 
-    def testExtractSear(self):
+    def testExtractAnalyse(self):
         sos = self.saucery.sosreport(TEST_SOS)
         self.assertTrue(sos.exists())
         self.assertFalse(sos.extracted)
@@ -36,10 +36,10 @@ class SauceryTest(unittest.TestCase):
         sos.extract()
         self.assertTrue(sos.extracted)
         self.assertFalse(sos.invalid)
-        self.assertFalse(sos.seared)
+        self.assertFalse(sos.analysed)
         self.assertGreater(sos.file_count, 0)
         self.assertIsNotNone(sos.file_list)
         self.assertEqual(sos.hostname, 'sosreport-f')
 
-        sos.sear()
+        sos.analyse()
         self.assertEqual(sos.case, '123456')

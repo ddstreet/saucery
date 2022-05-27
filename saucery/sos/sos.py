@@ -1,14 +1,11 @@
 #!/usr/bin/python3
 
 import logging
-import magic
 import re
 import shutil
 import subprocess
-import tarfile
-import tempfile
 
-from collections import defaultdict
+from collections import ChainMap
 from datetime import datetime
 from functools import cached_property
 from itertools import chain
@@ -18,6 +15,10 @@ from ..base import SauceryBase
 from ..reduction import Reductions
 from ..reduction.analysis.analysis import Analysis
 
+from .analyse import SOSAnalysis
+from .analyse import SOSAnalysisError
+from .extract import SOSExtraction
+from .extract import SOSExtractionError
 from .meta import SOSMetaDict
 from .meta import SOSMetaProperty
 
@@ -65,83 +66,17 @@ class SOS(SauceryBase):
     def compression(self):
         return self._sosreport_match.group('compression')
 
+    @property
+    def reductionsdir(self):
+        return self.config.get('reductions')
+
+    @cached_property
+    def reductions(self):
+        return Reductions(self, self.reductionsdir)
+
     @cached_property
     def workdir(self):
         return self.sosreport.parent / self.name
-
-    case = SOSMetaProperty('case')
-    customer = SOSMetaProperty('customer')
-
-    @cached_property
-    def meta(self):
-        return SOSMetaDict(self, self.config.get('meta', '').split())
-
-    seared = SOSMetaProperty('seared', bool)
-    conclusions = SOSMetaProperty('conclusions', 'json')
-
-    def sear(self, resear=False):
-        if not self.filesdir.exists() or not self.extracted:
-            LOGGER.error(f"Not extracted, can't sear: {self.name}")
-            return
-
-        if not self.case:
-            filename_case = self._sosreport_match.group('case')
-            if filename_case:
-                LOGGER.info(f'Setting case to {filename_case} based on filename: {self.name}')
-                self.case = filename_case
-            else:
-                LOGGER.error(f"Case unset and not in filename, can't sear: {self.name}")
-                return
-
-        if self.seared:
-            if resear:
-                LOGGER.info(f'Re-searing {self.name}')
-            else:
-                LOGGER.info(f'Already seared, not re-searing {self.name}')
-                return
-        else:
-            LOGGER.info(f'Searing {self.name}')
-
-        if self.dry_run:
-            return
-
-        self.seared = False
-
-        for key in self.meta.keys():
-            if self.meta.get(key) and not resear:
-                LOGGER.debug(f"Already have meta '{key}', skipping: {self.name}")
-                continue
-            cmd = self.config.get(f'meta_{key}')
-            if not cmd:
-                LOGGER.warning(f"No config for meta '{key}', skipping: {self.name}")
-                continue
-            LOGGER.debug(f"Getting meta '{key}': {cmd} {self.filesdir}")
-            try:
-                result = subprocess.run(cmd.split() + [self.filesdir], encoding='utf-8',
-                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            except subprocess.SubprocessException:
-                LOGGER.exception(f"Error getting meta '{key}': {self.name}")
-                continue
-            if result.returncode != 0:
-                LOGGER.error(f"Error ({result.returncode}) getting meta '{key}': {self.name}")
-                if result.stderr.strip():
-                    LOGGER.error(result.stderr)
-                continue
-            self.meta[key] = result.stdout
-            LOGGER.info(f"Set meta '{key}': {self.name}")
-        LOGGER.info(f'Finished setting meta values: {self.name}')
-
-        conclusions = []
-        for a in self.reductions.analyses:
-            LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
-            try:
-                conclusions.append(dict(a.conclusion))
-            except Exception:
-                LOGGER.exception(f'Analysis {a.name} failed, skipping')
-        self.conclusions = conclusions
-        LOGGER.info(f'Finished analysing sosreport: {self.name}')
-
-        self.seared = True
 
     @property
     def linesdir(self):
@@ -157,14 +92,14 @@ class SOS(SauceryBase):
             d = d / 'sos_commands' / command
         return d / filename
 
-    def _file_read(self, filename, func, *, command=None, strip=True):
+    def _file_read(self, filename, func, *, command=None, strip=False):
         try:
             f = self.file(filename, command=command)
             content = getattr(f, func)()
         except FileNotFoundError:
             return None
         if strip:
-            return content.strip()
+            content = content.strip()
         return content
 
     def file_text(self, filename, **kwargs):
@@ -173,13 +108,61 @@ class SOS(SauceryBase):
     def file_bytes(self, filename, **kwargs):
         return self._file_read(filename, 'read_bytes', **kwargs)
 
+    @property
+    def isodate(self):
+        cmd = ['date', '--iso-8601=seconds', '--utc']
+        for filename in ['date_--utc', 'hwclock', 'date']:
+            sosdate = self.file_text(filename, command='date', strip=True)
+            if not sosdate:
+                continue
+            result = subprocess.run(cmd + [f'--date={sosdate}'],
+                                    stdout=subprocess.PIPE, encoding='utf-8')
+            if result.returncode == 0:
+                return result.stdout.strip()
+        return None
+
+    @property
+    def datetime(self):
+        if self.isodate:
+            return datetime.fromisoformat(self.isodate)
+        return None
+
+    @property
+    def hostname(self):
+        return self.file_text('hostname', strip=True)
+
+    @property
+    def machineid(self):
+        return self.file_text('etc/machine-id', strip=True)
+
+    @property
+    def json(self):
+        LOGGER.debug(f'Generating JSON for {self.name}')
+
+        conclusions = {level: len(list(chain(*[c.get('results') for c in self.conclusions
+                                               if c.get('abnormal') and c.get('level') == level])))
+                       for level in Analysis.VALID_LEVELS}
+
+        result = {
+            'name': self.name,
+            'sosreport': self.sosreport.name,
+            'datetime': self.isodate,
+            'hostname': self.hostname,
+            'machineid': self.machineid,
+            'case': self.case,
+            'customer': self.customer,
+        }
+        if self.conclusions:
+            result['conclusions'] = conclusions
+        return result
+
     invalid = SOSMetaProperty('invalid', bool)
     extracted = SOSMetaProperty('extracted', bool)
     file_list = SOSMetaProperty('file_list')
     file_count = SOSMetaProperty('file_count', int)
     total_size = SOSMetaProperty('total_size', int)
 
-    def extract(self, *, reextract=False):
+    def extract(self, reextract=False):
         if self.invalid and not reextract:
             LOGGER.error(f'Invalid sosreport, not extracting: {self.name}')
             return
@@ -194,153 +177,126 @@ class SOS(SauceryBase):
                 LOGGER.info(f'Already extracted, not re-extracting: {self.filesdir}')
                 return
 
-        if self.linesdir.exists() and not self.dry_run:
-            shutil.rmtree(self.linesdir)
-
         LOGGER.info(f'Extracting: {self.sosreport.name} -> {self.filesdir}')
         if self.dry_run:
             return
 
-        if not self.workdir.exists():
-            self.workdir.mkdir(parents=False, exist_ok=False)
-
-        self.invalid = False
         self.extracted = False
-        members = defaultdict(list)
+        del self.invalid
+        del self.file_list
+        del self.file_count
+        del self.total_size
+
+        e = SOSExtraction(self)
         try:
-            with tempfile.TemporaryDirectory(dir=self.workdir) as tmpdir:
-                top = None
-                dest = Path(tmpdir).resolve()
-                with tarfile.open(self.sosreport) as tar:
-                    for m in tar:
-                        topdir = m.name.split('/')[0]
-                        if not top:
-                            top = topdir
-                        elif top != topdir:
-                            raise ValueError(f'Multiple top-level dirs: {top}, {topdir}')
-                        self._extract_member(tar, dest, m, members)
-                if not top:
-                    raise ValueError('No files found in sosreport')
-                # Rename the top-level 'sosreport-...' dir so our files/ dir contains the content
-                dest.joinpath(top).rename(self.filesdir)
-        except Exception as e:
+            e.extract()
+        except SOSExtractionError as e:
             LOGGER.error(f'Invalid sosreport, error extracting: {self.sosreport}: {e}')
             LOGGER.exception(e)
             self.invalid = True
             return
 
-        self.file_list = '\n'.join(members['file']) + '\n'
-        self.file_count = len(members['file'])
-        self.total_size = sum(members['size'])
-
-        LOGGER.info(f'Extracted {self.file_count} members '
-                    f'({self.total_size} bytes): {self.filesdir}')
+        self.file_list = '\n'.join(map(str, e.relative_file_paths)) + '\n'
+        self.file_count = len(e.file_paths)
+        self.total_size = sum(e.file_sizes)
         self.extracted = True
 
-    def _extract_member(self, tar, dest, m, members):
-        path = dest.joinpath(m.name).resolve()
-        mname = '/'.join(m.name.split('/')[1:])
-        if not str(path).startswith(str(dest)):
-            LOGGER.warning(f"Skipping invalid member path '{m.name}': {self.name}")
-            mtype = 'invalid'
-        elif m.isdir():
-            path.mkdir(mode=0o775)
-            mtype = 'dir'
-        elif getattr(m, 'linkname', None):
-            if not str(path.parent.joinpath(m.linkname).resolve()).startswith(str(dest)):
-                LOGGER.warning(f"Skipping invalid file '{m.name}' "
-                               f"link path '{m.linkname}': {self.name}")
-            path.symlink_to(m.linkname)
-            mtype = 'link'
-            lines_path = self.linesdir / mname
-            lines_path.parent.mkdir(parents=True, exist_ok=True)
-            lines_path.symlink_to(m.linkname)
-        elif m.ischr():
-            LOGGER.debug(f"Ignoring char node '{m.name}': {self.name}")
-            mtype = 'chr'
-        elif m.isblk():
-            LOGGER.debug(f"Ignoring block node '{m.name}': {self.name}")
-            mtype = 'blk'
-        elif m.isfifo():
-            LOGGER.debug(f"Ignoring fifo node '{m.name}': {self.name}")
-            mtype = 'fifo'
-        elif m.isfile():
-            tar.extract(m, path=dest)
-            mode = path.stat().st_mode
-            path.chmod(mode | 0o644)
-            mtype = 'file'
-            members['size'].append(m.size)
-            filetype = magic.from_file(str(path), mime=True)
-            members['filetype'] = set(members['filetype']) | set((filetype,))
-            if filetype.startswith('text'):
-                self._detect_newlines(path, mname)
+    analysed = SOSMetaProperty('analysed', bool)
+    conclusions = SOSMetaProperty('conclusions', 'json')
+
+    def analyse(self, reanalyse=False):
+        if not self.filesdir.exists() or not self.extracted:
+            LOGGER.error(f"Not extracted, can't analyse: {self.name}")
+            return
+
+        if self.analysed:
+            if reanalyse:
+                LOGGER.info(f'Re-analysing {self.name}')
+            else:
+                LOGGER.info(f'Already analysed, not re-analysing {self.name}')
+                return
         else:
-            LOGGER.debug(f"Ignoring unknown type '{m.type}' member '{m.name}': {self.name}")
-            mtype = 'unknown'
-        members[mtype].append(mname)
+            LOGGER.info(f'Analysing {self.name}')
 
-    def _detect_newlines(self, path, name):
-        lines = [newline.end() for newline in re.finditer(b'^|\n|(?<!\n)$', path.read_bytes())]
-        lines_path = self.linesdir / name
-        lines_path.parent.mkdir(parents=True, exist_ok=True)
-        lines_path.write_text(','.join(map(str, lines)))
+        if self.dry_run:
+            return
 
-    @property
-    def datetime(self):
-        if self.isodate:
-            return datetime.fromisoformat(self.isodate)
-        return None
+        self.analysed = False
+        del self.conclusions
+
+        a = SOSAnalysis(self)
+        try:
+            a.analyse()
+        except SOSAnalysisError as e:
+            LOGGER.error(f'Error analysing: {self.sosreport}: {e}')
+            LOGGER.exception(e)
+            return
+        LOGGER.info(f'Finished analysing sosreport: {self.name}')
+
+        self.conclusions = a.conclusions
+        self.analysed = True
+
+    case = SOSMetaProperty('case')
+
+    def lookup_case(self):
+        if self.case:
+            LOGGER.debug(f"Already have 'case', skipping lookup: {self.name}")
+            return
+        self.case = self.lookup('case')
+        if self.case:
+            LOGGER.info(f"Set 'case' to '{self.case}' based on lookup: {self.name}")
+            return
+        self.case = self._sosreport_match.group('case')
+        if self.case:
+            LOGGER.info(f"Set 'case' to '{self.case}' based on filename: {self.name}")
+
+    customer = SOSMetaProperty('customer')
+
+    def lookup_customer(self):
+        if self.customer:
+            LOGGER.debug(f"Already have 'customer', skipping lookup: {self.name}")
+            return
+        self.customer = self.lookup('customer')
+        if self.customer:
+            LOGGER.info(f"Set 'customer' to '{self.customer}' based on lookup: {self.name}")
 
     @cached_property
-    def isodate(self):
-        cmd = ['date', '--iso-8601=seconds', '--utc']
-        for filename in ['date_--utc', 'hwclock', 'date']:
-            sosdate = self.file_text(filename, command='date')
-            if not sosdate:
+    def meta(self):
+        return SOSMetaDict(self, self.config.get('meta', '').split())
+
+    def lookup_meta(self):
+        lookedup = []
+        for key in self.meta.keys():
+            if self.meta.get(key):
+                LOGGER.debug(f"Already have meta '{key}', skipping: {self.name}")
                 continue
-            result = subprocess.run(cmd + [f'--date={sosdate}'],
-                                    stdout=subprocess.PIPE, encoding='utf-8')
-            if result.returncode == 0:
-                return result.stdout.strip()
-        return None
+            self.meta[key] = self.lookup(f'meta_{key}')
+            if self.meta.get(key):
+                lookedup.append(key)
+        if lookedup:
+            LOGGER.info(f"Looked up meta values '{','.join(lookedup)}': {self.name}")
 
-    @property
-    def hostname(self):
-        return self.file_text('hostname')
+    def lookup(self, key):
+        cmd = self.config.get(key)
+        if not cmd:
+            LOGGER.debug(f"No config for '{key}', skipping: {self.name}")
+            return None
+        cmd = [c.format_map(ChainMap({'meta': ''}, vars(self))) for c in cmd.split()]
+        cmdstr = ' '.join(cmd)
 
-    @property
-    def machineid(self):
-        return self.file_text('etc/machine-id')
+        LOGGER.debug(f"Lookup for '{key}': {cmdstr}")
+        try:
+            result = subprocess.run(cmd, encoding='utf-8',
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.SubprocessException:
+            LOGGER.exception(f"Error running '{cmdstr}': {self.name}")
+            return None
 
-    @property
-    def reductionsdir(self):
-        return self.config.get('reductions')
+        if result.returncode != 0:
+            LOGGER.error(f"Error ({result.returncode}) running '{cmdstr}': {self.name}")
+            if result.stderr.strip():
+                LOGGER.error(result.stderr)
+            return None
 
-    @cached_property
-    def reductions(self):
-        return Reductions(self, self.reductionsdir)
-
-    def _conclusions_level_count(self, level):
-        level = level.lower()
-        if level not in Analysis.VALID_LEVELS:
-            raise ValueError(f'Invalid analysis level {level}: {self.name}')
-        conclusions = self.conclusions
-        if not conclusions:
-            return '?'
-        return len(list(chain(*[c.get('results') for c in conclusions
-                                if c.get('abnormal') and c.get('level') == level])))
-
-    @property
-    def json(self):
-        LOGGER.debug(f'Generating JSON for {self.name}')
-        return {
-            'name': self.name,
-            'sosreport': self.sosreport.name,
-            'datetime': self.isodate,
-            'hostname': self.hostname,
-            'machineid': self.machineid,
-            'case': self.case,
-            'customer': self.customer,
-            'conclusions': {level: self._conclusions_level_count(level)
-                            for level in Analysis.VALID_LEVELS},
-        }
+        LOGGER.debug(f"Looked up '{key}': {self.name}")
+        return result.stdout
