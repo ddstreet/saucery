@@ -30,7 +30,8 @@ class SOSMetaProperty(property):
         setattr(sos, self.cachename, value)
 
     def del_cache(self, sos):
-        delattr(sos, self.cachename)
+        with suppress(AttributeError):
+            delattr(sos, self.cachename)
 
     def path(self, sos):
         return sos.workdir / self.name
