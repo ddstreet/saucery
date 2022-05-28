@@ -37,8 +37,8 @@ class SauceryTest(unittest.TestCase):
         self.assertTrue(sos.extracted)
         self.assertFalse(sos.invalid)
         self.assertFalse(sos.analysed)
-        self.assertGreater(sos.file_count, 0)
-        self.assertIsNotNone(sos.file_list)
+        self.assertGreater(len(sos.files_json), 0)
+        self.assertGreater(sos.total_size, 0)
         self.assertEqual(sos.hostname, 'sosreport-f')
 
         sos.analyse()
