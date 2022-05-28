@@ -45,7 +45,7 @@ class SOS(SauceryBase):
 
     @property
     def defaultconfig(self):
-        return {'reductions': str(self.saucerydir / 'reductions')}
+        return {'reductions': str(self.saucery.saucerydir / 'reductions')}
 
     @cached_property
     def sosreport(self):
@@ -223,6 +223,10 @@ class SOS(SauceryBase):
 
         self.analysed = False
         del self.conclusions
+
+        self.lookup_case()
+        self.lookup_customer()
+        self.lookup_meta()
 
         a = SOSAnalysis(self)
         try:
