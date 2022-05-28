@@ -158,8 +158,7 @@ class SOS(SauceryBase):
 
     invalid = SOSMetaProperty('invalid', bool)
     extracted = SOSMetaProperty('extracted', bool)
-    file_list = SOSMetaProperty('file_list')
-    file_count = SOSMetaProperty('file_count', int)
+    files_json = SOSMetaProperty('files.json', 'json')
     total_size = SOSMetaProperty('total_size', int)
 
     def extract(self, reextract=False):
@@ -183,8 +182,7 @@ class SOS(SauceryBase):
 
         self.extracted = False
         del self.invalid
-        del self.file_list
-        del self.file_count
+        del self.files_json
         del self.total_size
 
         e = SOSExtraction(self)
@@ -196,9 +194,8 @@ class SOS(SauceryBase):
             self.invalid = True
             return
 
-        self.file_list = '\n'.join(map(str, e.relative_file_paths)) + '\n'
-        self.file_count = len(e.file_paths)
-        self.total_size = sum(e.file_sizes)
+        self.files_json = e.members
+        self.total_size = sum((m.get('size') for m in e.get_members('file')))
         self.extracted = True
 
     analysed = SOSMetaProperty('analysed', bool)

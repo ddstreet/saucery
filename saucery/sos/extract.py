@@ -3,7 +3,6 @@ import logging
 import tarfile
 import tempfile
 
-from collections import defaultdict
 from pathlib import Path
 
 
@@ -17,27 +16,13 @@ class SOSExtractionError(Exception):
 class SOSExtraction(object):
     def __init__(self, sos):
         self.sos = sos
-        self._paths = defaultdict(list)
-        self.file_sizes = []
+        self.members = []
 
-    def paths(self, name):
-        return self._paths[name]
+    def add_member(self, path, membertype, **kwargs):
+        self.members.append(SOSExtractionMember(path, membertype, **kwargs))
 
-    @property
-    def file_paths(self):
-        return self.paths('file')
-
-    @property
-    def dir_paths(self):
-        return self.paths('dir')
-
-    @property
-    def link_paths(self):
-        return self.paths('link')
-
-    @property
-    def relative_file_paths(self):
-        return ['/'.join(p.parts[1:]) for p in self.file_paths]
+    def get_members(self, membertype):
+        return [m for m in self.members if m.get('type') == membertype]
 
     def extract(self):
         if not self.sos.workdir.exists():
@@ -67,27 +52,27 @@ class SOSExtraction(object):
 
     def extract_member(self, dest, tar, m):
         path = dest.joinpath(m.name).resolve()
-        relpath = path.relative_to(dest)
+        relpath = Path(*path.relative_to(dest).parts[1:])
         if not str(path).startswith(str(dest)):
             self.warning(f"Skipping invalid member path '{m.name}'")
-            self.paths('invalid').append(relpath)
+            self.add_member(relpath, 'invalid')
         elif m.isdir():
             path.mkdir(mode=0o775)
-            self.paths('dir').append(relpath)
+            self.add_member(relpath, 'dir')
         elif getattr(m, 'linkname', None):
             if not str(path.parent.joinpath(m.linkname).resolve()).startswith(str(dest)):
                 self.warning(f"Skipping invalid file '{m.name}' link '{m.linkname}'")
             path.symlink_to(m.linkname)
-            self.paths('link').append(relpath)
+            self.add_member(relpath, 'link', link=m.linkname)
         elif m.ischr():
             self.debug(f"Ignoring char node '{m.name}'")
-            self.paths('chr').append(relpath)
+            self.add_member(relpath, 'chr')
         elif m.isblk():
             self.debug(f"Ignoring block node '{m.name}'")
-            self.paths('blk').append(relpath)
+            self.add_member(relpath, 'blk')
         elif m.isfifo():
             self.debug(f"Ignoring fifo node '{m.name}'")
-            self.paths('fifo').append(relpath)
+            self.add_member(relpath, 'fifo')
         elif m.isfile():
             if tar.fileobj.tell() != m.offset_data:
                 self.warning(f'tar offset {tar.fileobj.tell()} != '
@@ -96,11 +81,10 @@ class SOSExtraction(object):
             path.write_bytes(tar.fileobj.read(m.size))
             mode = path.stat().st_mode
             path.chmod(mode | 0o644)
-            self.paths('file').append(relpath)
-            self.file_sizes.append(m.size)
+            self.add_member(relpath, 'file', size=m.size)
         else:
             self.debug(f"Ignoring unknown type '{m.type}' member '{m.name}'")
-            self.paths('unknown').append(relpath)
+            self.add_member(relpath, 'unknown')
 
     def _log(self, lvl, fmt, *args):
         LOGGER.log(lvl, f'{fmt}: {self.sos.name}', *args)
@@ -116,3 +100,8 @@ class SOSExtraction(object):
 
     def debug(self, *args):
         self._log(logging.DEBUG, *args)
+
+
+class SOSExtractionMember(dict):
+    def __init__(self, path, membertype, **kwargs):
+        super().__init__(name=path.name, path=str(path), type=membertype, **kwargs)

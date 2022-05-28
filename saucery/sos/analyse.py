@@ -35,15 +35,15 @@ class SOSAnalysis(object):
         if self.sos.linesdir.exists() and not self.sos.dry_run:
             shutil.rmtree(self.sos.linesdir)
 
-        for f in self.sos.file_list.splitlines():
-            self.create_newline_file(f)
-
-        for f in self.sos.link_list.splitlines():
-            self.create_newline_symlink(f)
+        for f in self.sos.files_json:
+            if f.get('type') == 'file':
+                self.create_newline_file(f.get('path'))
+            elif f.get('type') == 'link':
+                self.create_newline_symlink(f.get('path'))
 
     def create_newline_symlink(self, f):
         path = self.sos.file(f)
-        lines_path = self.linesdir / f
+        lines_path = self.sos.linesdir / f
         lines_path.parent.mkdir(parents=True, exist_ok=True)
         lines_path.symlink_to(os.readlink(str(path)))
 
