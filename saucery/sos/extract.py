@@ -1,5 +1,7 @@
 
 import logging
+import shutil
+import subprocess
 import tarfile
 import tempfile
 
@@ -18,6 +20,11 @@ class SOSExtraction(object):
     '''Extract SOS object (tarball) to SOS files/ dir.'''
     def __init__(self, sos):
         self._sos = sos
+
+    @property
+    def _journal_output_path(self):
+        # TODO: this should be made a config value, maybe with this value as default
+        return 'sos_commands/logs/journal'
 
     @property
     def sos(self):
@@ -51,14 +58,16 @@ class SOSExtraction(object):
         repackage the extracted files into an image and r/o mount that
         at the files/ dir.
         '''
-        if not self.sos.workdir.exists():
-            self.sos.workdir.mkdir(parents=False, exist_ok=False)
+        destdir = self.sos.filesdir.parent
+        if not destdir.exists():
+            destdir.mkdir(parents=False, exist_ok=False)
 
         try:
-            with tempfile.TemporaryDirectory(dir=self.sos.workdir) as tmpdir:
+            with tempfile.TemporaryDirectory(dir=destdir) as tmpdir:
                 # Extract and rename 'tmpdir/sosreport-.../' to 'files/'
-                extracted = self._extract_to(Path(tmpdir).resolve())
-                extracted.rename(self.sos.filesdir)
+                path = self._extract_to(Path(tmpdir).resolve())
+                self._process(path)
+                path.rename(self.sos.filesdir)
         except Exception as e:
             raise SOSExtractionError(e)
 
@@ -95,6 +104,42 @@ class SOSExtraction(object):
             self.warning(f"Skipping invalid member '{path}' link '{member.get('link')}'")
         elif not member.extract(tar):
             self.debug(f"Ignoring {member.type} member '{path}'")
+
+    def _process(self, path):
+        if self._extract_journal(path):
+            self._remove_journal(path)
+
+    def _extract_journal(self, dest):
+        try:
+            machine_id = dest.joinpath('etc/machine-id').read_text().strip()
+        except FileNotFoundError:
+            self.info('Could not read /etc/machine-id, skipping journal processing')
+            return False
+
+        journaldir = dest / 'var/log/journal' / machine_id
+        if not journaldir.exists():
+            self.info('No journal dir for {machine_id}, skipping journal processing')
+            return False
+
+        output = dest / self._journal_output_path
+        cmd = ['journalctl', '--no-pager', '--system', '-o', 'with-unit', '-D', str(journaldir)]
+        with output.open(mode='wb') as o:
+            result = subprocess.run(cmd, stdout=o, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            self.error('Failed to extract journal, skipping')
+            if result.stderr.strip():
+                self.error(result.stderr)
+            return False
+        return True
+
+    def _remove_journal(self, dest):
+        jpath = 'var/log/journal'
+        path = dest / jpath
+        if path.exists():
+            try:
+                shutil.rmtree(path)
+            except Exception as e:
+                self.error(f'Failed to remove journal dir {jpath}: {e}')
 
     def _log(self, lvl, fmt, *args):
         LOGGER.log(lvl, f'{fmt}: {self.sos.name}', *args)
