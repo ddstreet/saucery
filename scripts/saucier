@@ -14,15 +14,23 @@ from saucery.argparse import SauceryArgumentParser
 def main():
     parser = SauceryArgumentParser()
 
-    parser.add_argument('--force', action='store_true', help='Re-extract or re-sear already processed sosreports')
+    parser.add_argument('--force', action='store_true',
+                        help='Re-extract or re-sear already processed sosreports')
     parser.add_argument('--threads',
                         default=0, type=int,
                         help='Run actions in this many threads (0: #cpus, default: 0)')
 
-    parser.add_argument('-E', '--extract', action='store_true', help='Extract the sosreport')
-    parser.add_argument('-S', '--sear', action='store_true', help='Sear (process) the sosreport')
-    parser.add_argument('-M', '--menu', action='store_true', help='Update the menu with current sosreports')
-    parser.action_attrs.extend(['extract', 'sear', 'menu'])
+    parser.add_argument('-E', '--extract', action='store_true',
+                        help='Extract the sosreport')
+    parser.add_argument('-S', '--squash', action='store_true',
+                        help="Squash the extracted sosreport (requires 'mksquashfs')")
+    parser.add_argument('-M', '--mount', action='store_true',
+                        help="Mount the squashed sosreport (requires 'squashfuse')")
+    parser.add_argument('-A', '--analyse', action='store_true',
+                        help='Analyse the extracted/mounted sosreport')
+    parser.add_argument('-U', '--menu', action='store_true',
+                        help='Update the menu with current sosreports')
+    parser.action_attrs.extend(['extract', 'squash', 'mount', 'analyse', 'menu'])
 
     parser.add_argument('sosreport', nargs='*', default=[],
                         help='Act on specific sosreports (implies --force)')
@@ -43,7 +51,9 @@ def main():
                  force=opts.force or bool(opts.sosreport),
                  parallel=parallel,
                  extract=opts.extract,
-                 sear=opts.sear,
+                 squash=opts.squash,
+                 mount=opts.mount,
+                 analyse=opts.analyse,
                  update_menu=opts.menu)
 
     if not opts.has_action:

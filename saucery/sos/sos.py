@@ -21,6 +21,8 @@ from .extract import SOSExtraction
 from .extract import SOSExtractionError
 from .meta import SOSMetaDict
 from .meta import SOSMetaProperty
+from .squash import SOSSquash
+from .squash import SOSSquashError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -185,25 +187,120 @@ class SOS(SauceryBase):
         del self.files_json
         del self.total_size
 
-        e = SOSExtraction(self)
+        extractor = SOSExtraction(self)
         try:
-            e.extract()
+            extractor.extract()
         except SOSExtractionError as e:
             LOGGER.error(f'Invalid sosreport, error extracting: {self.sosreport}: {e}')
             LOGGER.exception(e)
             self.invalid = True
             return
 
-        self.files_json = e.members
-        self.total_size = sum((m.get('size') for m in e.get_members('file')))
+        self.files_json = extractor.members
+        self.total_size = sum((m.get('size') for m in extractor.get_members('file')))
         self.extracted = True
+
+    @property
+    def squashimg(self):
+        return self.workdir / 'squash.img'
+
+    squashed = SOSMetaProperty('squashed', bool)
+
+    def squash(self, resquash=False):
+        if not self.filesdir.exists() or not self.extracted:
+            LOGGER.error(f"Not extracted, can't squash: {self.name}")
+            return
+
+        if self.squashimg.exists():
+            if resquash or not self.squashed:
+                LOGGER.info(f'Removing existing img at {self.squashimg}')
+                if not self.dry_run:
+                    self.squashimg.unlink()
+            else:
+                LOGGER.info(f'Already squashed, not re-squashing {self.name}')
+                return
+        else:
+            LOGGER.info(f'Squashing {self.name}')
+
+        if self.dry_run:
+            return
+
+        self.squashed = False
+
+        squasher = SOSSquash(self)
+        try:
+            squasher.squash()
+        except SOSSquashError as e:
+            LOGGER.error(f'Error squashing: {self.sosreport}: {e}')
+            LOGGER.exception(e)
+            return
+
+        LOGGER.info(f'Squashed ok, removing {self.filesdir}')
+        shutil.rmtree(self.filesdir)
+        self.extracted = False
+        self.squashed = True
+
+    @property
+    def mounted(self):
+        return self.filesdir.is_mount()
+
+    def mount(self, remount=False):
+        if not self.squashimg.exists() or not self.squashed:
+            LOGGER.error(f"Not squashed, can't mount: {self.name}")
+            return
+
+        if self.mounted:
+            if remount:
+                LOGGER.info(f'Unmounting {self.filesdir}')
+                if not self.dry_run:
+                    result = subprocess.run(['umount', self.filesdir], encoding='utf-8',
+                                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                    if result.returncode != 0:
+                        LOGGER.error(f'Could not unmount {self.filesdir}')
+                        if result.stderr.strip():
+                            LOGGER.error(result.stderr)
+                        return
+            else:
+                LOGGER.info(f'Already mounted, not re-mounting {self.filesdir}')
+                return
+        else:
+            LOGGER.info(f'Mounting {self.squashimg} at {self.filesdir}')
+
+        if self.dry_run:
+            return
+
+        squasher = SOSSquash(self)
+        try:
+            squasher.mount()
+        except SOSSquashError as e:
+            LOGGER.error(f'Error mounting {self.squashimg}: {e}')
+            LOGGER.exception(e)
+
+    def umount(self):
+        '''Alias for unmount(), to match unix "umount" cmd'''
+        self.unmount()
+
+    def unmount(self):
+        if not self.mounted:
+            LOGGER.info(f'Not mounted: {self.name}')
+            return
+
+        if self.dry_run:
+            return
+
+        squasher = SOSSquash(self)
+        try:
+            squasher.unmount()
+        except SOSSquashError as e:
+            LOGGER.error(f'Error unmounting {self.squashimg}: {e}')
+            LOGGER.exception(e)
 
     analysed = SOSMetaProperty('analysed', bool)
     conclusions = SOSMetaProperty('conclusions', 'json')
 
     def analyse(self, reanalyse=False):
-        if not self.filesdir.exists() or not self.extracted:
-            LOGGER.error(f"Not extracted, can't analyse: {self.name}")
+        if not self.filesdir.exists() or not (self.extracted or self.mounted):
+            LOGGER.error(f"Not extracted/mounted, can't analyse: {self.name}")
             return
 
         if self.analysed:

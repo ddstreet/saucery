@@ -46,17 +46,25 @@ class Saucier(SauceryBase):
         with futures.ThreadPoolExecutor(max_workers=int(parallel)) as executor:
             executor.map(action, sosreports)
 
-    def _cook(self, sosreport, *, extract=False, sear=False, force=False):
+    def _cook(self, sosreport, *,
+              extract=False, squash=False, mount=False, analyse=False,
+              force=False):
         if extract:
             sosreport.extract(reextract=force)
-        if sear:
-            sosreport.sear(resear=force)
+        if squash:
+            sosreport.squash(resquash=force)
+        if mount:
+            sosreport.mount(remount=force)
+        if analyse:
+            sosreport.analyse(reanalyse=force)
 
     def cook(self, sosreports, *,
-             extract=False, sear=False, update_menu=False,
-             force=False, parallel=True):
+             extract=False, squash=False, mount=False, analyse=False,
+             update_menu=False, force=False, parallel=True):
         self._parallel(sosreports,
-                       partial(self._cook, extract=extract, sear=sear, force=force),
+                       partial(self._cook,
+                               extract=extract, squash=squash, mount=mount, analyse=analyse,
+                               force=force),
                        parallel=parallel)
 
         if update_menu:
@@ -65,8 +73,14 @@ class Saucier(SauceryBase):
     def extract(self, sosreports, *, parallel=False, reextract=False):
         self.cook(sosreports, extract=True, force=reextract, parallel=parallel)
 
-    def sear(self, sosreports, *, parallel=False, resear=False):
-        self.cook(sosreports, sear=True, force=resear, parallel=parallel)
+    def squash(self, sosreports, *, parallel=False, resquash=False):
+        self.cook(sosreports, squash=True, force=resquash, parallel=parallel)
+
+    def mount(self, sosreports, *, parallel=False, remount=False):
+        self.cook(sosreports, mount=True, force=remount, parallel=parallel)
+
+    def analyse(self, sosreports, *, parallel=False, reanalyse=False):
+        self.cook(sosreports, analyse=True, force=reanalyse, parallel=parallel)
 
     def update_menu(self):
         return self.saucery.update_menu()
