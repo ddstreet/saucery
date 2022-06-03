@@ -128,7 +128,7 @@ class SOSExtraction(object):
             self.info(f'No journal dir for {machine_id}, skipping journal processing')
             return False
 
-        self.info(f'Converting binary journals to text')
+        self.info('Converting binary journals to text')
 
         output = dest / self._journal_output_path
         cmd = ['journalctl', '--no-pager', '--system', '-o', 'with-unit', '-D', str(journaldir)]
