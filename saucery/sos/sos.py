@@ -163,22 +163,35 @@ class SOS(SauceryBase):
     files_json = SOSMetaProperty('files.json', 'json')
     total_size = SOSMetaProperty('total_size', int)
 
-    def extract(self, reextract=False):
+    def extract(self, *args, **kwargs):
+        self._extract(*args, **kwargs)
+        return self.extracted
+
+    def _extract(self, reextract=False):
         if self.invalid and not reextract:
             LOGGER.error(f'Invalid sosreport, not extracting: {self.name}')
             return
 
+        if self.squashed and not reextract:
+            LOGGER.info(f'Already squashed, not extracting (try mounting instead): {self.name}')
+            return
+
         if self.filesdir.exists():
-            if reextract or not self.extracted:
-                partial = '' if self.extracted else 'partial '
-                LOGGER.info(f'Removing existing {partial}data at {self.filesdir}')
-                if not self.dry_run:
-                    shutil.rmtree(self.filesdir)
+            if reextract or not (self.extracted or self.mounted):
+                if self.mounted:
+                    if not self.unmount():
+                        return
+                else:
+                    partial = '' if self.extracted else 'partial '
+                    LOGGER.info(f'Removing existing {partial}data at {self.filesdir}')
+                    if not self.dry_run:
+                        shutil.rmtree(self.filesdir)
             else:
                 LOGGER.info(f'Already extracted, not re-extracting: {self.filesdir}')
                 return
 
-        LOGGER.info(f'Extracting: {self.sosreport.name} -> {self.filesdir}')
+        LOGGER.info(f'Extracting {self.sosreport.name} to {self.filesdir}')
+
         if self.dry_run:
             return
 
@@ -196,6 +209,8 @@ class SOS(SauceryBase):
             self.invalid = True
             return
 
+        LOGGER.info(f'Extracted {self.sosreport.name} to {self.filesdir}')
+
         self.files_json = extractor.members
         self.total_size = sum((m.get('size') for m in extractor.get_members('file')))
         self.extracted = True
@@ -206,21 +221,25 @@ class SOS(SauceryBase):
 
     squashed = SOSMetaProperty('squashed', bool)
 
-    def squash(self, resquash=False):
+    def squash(self, *args, **kwargs):
+        self._squash(*args, **kwargs)
+        return self.squashed
+
+    def _squash(self, resquash=False):
+        if self.squashed and not resquash:
+            LOGGER.info(f'Already squashed, not re-squashing: {self.name}')
+            return
+
         if not self.filesdir.exists() or not self.extracted:
             LOGGER.error(f"Not extracted, can't squash: {self.name}")
             return
 
         if self.squashimg.exists():
-            if resquash or not self.squashed:
-                LOGGER.info(f'Removing existing img at {self.squashimg}')
-                if not self.dry_run:
-                    self.squashimg.unlink()
-            else:
-                LOGGER.info(f'Already squashed, not re-squashing {self.name}')
-                return
-        else:
-            LOGGER.info(f'Squashing {self.name}')
+            LOGGER.info(f'Removing existing img at {self.squashimg}')
+            if not self.dry_run:
+                self.squashimg.unlink()
+
+        LOGGER.info(f'Squashing {self.filesdir} to {self.squashimg}')
 
         if self.dry_run:
             return
@@ -235,36 +254,44 @@ class SOS(SauceryBase):
             LOGGER.exception(e)
             return
 
-        LOGGER.info(f'Squashed ok, removing {self.filesdir}')
-        shutil.rmtree(self.filesdir)
-        self.extracted = False
+        LOGGER.info(f'Finished squashing {self.squashimg}')
+        LOGGER.info(f'Removing {self.filesdir}')
+
         self.squashed = True
+        self.extracted = False
+        shutil.rmtree(self.filesdir)
 
     @property
     def mounted(self):
         return self.filesdir.is_mount()
 
-    def mount(self, remount=False):
+    def mount(self, *args, **kwargs):
+        self._mount(*args, **kwargs)
+        return self.mounted
+
+    def _mount(self, remount=False):
         if not self.squashimg.exists() or not self.squashed:
             LOGGER.error(f"Not squashed, can't mount: {self.name}")
             return
 
-        if self.mounted:
-            if remount:
-                LOGGER.info(f'Unmounting {self.filesdir}')
-                if not self.dry_run:
-                    result = subprocess.run(['umount', self.filesdir], encoding='utf-8',
-                                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                    if result.returncode != 0:
-                        LOGGER.error(f'Could not unmount {self.filesdir}')
-                        if result.stderr.strip():
-                            LOGGER.error(result.stderr)
+        if self.filesdir.exists():
+            if remount or not (self.extracted or self.mounted):
+                if self.mounted:
+                    if not self.unmount():
                         return
+                else:
+                    partial = '' if self.extracted else 'partial '
+                    LOGGER.info(f'Removing existing {partial}data at {self.filesdir}')
+                    if not self.dry_run:
+                        shutil.rmtree(self.filesdir)
             else:
-                LOGGER.info(f'Already mounted, not re-mounting {self.filesdir}')
+                if self.extracted:
+                    LOGGER.info(f'Not mounting over extracted files: {self.filesdir}')
+                elif self.mounted:
+                    LOGGER.info(f'Already mounted, not re-mounting: {self.filesdir}')
                 return
-        else:
-            LOGGER.info(f'Mounting {self.squashimg} at {self.filesdir}')
+
+        LOGGER.info(f'Mounting {self.squashimg} at {self.filesdir}')
 
         if self.dry_run:
             return
@@ -276,14 +303,22 @@ class SOS(SauceryBase):
             LOGGER.error(f'Error mounting {self.squashimg}: {e}')
             LOGGER.exception(e)
 
+        LOGGER.info(f'Finished mounting {self.filesdir}')
+
+    def unmount(self, *args, **kwargs):
+        self._unmount(*args, **kwargs)
+        return not self.mounted
+
     def umount(self):
         '''Alias for unmount(), to match unix "umount" cmd'''
-        self.unmount()
+        return self.unmount()
 
-    def unmount(self):
+    def _unmount(self):
         if not self.mounted:
             LOGGER.info(f'Not mounted: {self.name}')
             return
+
+        LOGGER.info(f'Unmounting {self.filesdir}')
 
         if self.dry_run:
             return
@@ -294,23 +329,32 @@ class SOS(SauceryBase):
         except SOSSquashError as e:
             LOGGER.error(f'Error unmounting {self.squashimg}: {e}')
             LOGGER.exception(e)
+            return
+
+        LOGGER.info(f'Finished umounting {self.filesdir}')
+
+        self.filesdir.rmdir()
 
     analysed = SOSMetaProperty('analysed', bool)
     conclusions = SOSMetaProperty('conclusions', 'json')
 
-    def analyse(self, reanalyse=False):
+    def analyse(self, *args, **kwargs):
+        self._analyse(*args, **kwargs)
+        return self.analysed
+
+    def _analyse(self, reanalyse=False):
         if not self.filesdir.exists() or not (self.extracted or self.mounted):
             LOGGER.error(f"Not extracted/mounted, can't analyse: {self.name}")
             return
 
         if self.analysed:
             if reanalyse:
-                LOGGER.info(f'Re-analysing {self.name}')
+                LOGGER.info(f'Ignoring existing analysis for {self.name}')
             else:
                 LOGGER.info(f'Already analysed, not re-analysing {self.name}')
                 return
-        else:
-            LOGGER.info(f'Analysing {self.name}')
+
+        LOGGER.info(f'Analysing {self.name}')
 
         if self.dry_run:
             return
@@ -329,6 +373,7 @@ class SOS(SauceryBase):
             LOGGER.error(f'Error analysing: {self.sosreport}: {e}')
             LOGGER.exception(e)
             return
+
         LOGGER.info(f'Finished analysing sosreport: {self.name}')
 
         self.conclusions = a.conclusions

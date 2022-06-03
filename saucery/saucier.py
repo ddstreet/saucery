@@ -33,6 +33,20 @@ class Saucier(SauceryBase):
                 LOGGER.info(e)
         return soses
 
+    def print_sosreports(self, sosreports):
+        if not sosreports:
+            sosreports = self.sosreports
+        for sos in map(self.sosreport, sosreports):
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                state = ','.join([s for s in
+                                  ['invalid', 'extracted', 'squashed', 'mounted']
+                                  if getattr(sos, s, False)])
+            else:
+                state = ''
+            if state:
+                state = f' ({state})'
+            LOGGER.info(f'{sos}{state}')
+
     def _parallel(self, sosreports, action, parallel=True):
         sosreports = self._sosreports(sosreports)
 
@@ -78,6 +92,10 @@ class Saucier(SauceryBase):
 
     def mount(self, sosreports, *, parallel=False, remount=False):
         self.cook(sosreports, mount=True, force=remount, parallel=parallel)
+
+    def unmount(self, sosreports):
+        for s in sosreports:
+            s.unmount()
 
     def analyse(self, sosreports, *, parallel=False, reanalyse=False):
         self.cook(sosreports, analyse=True, force=reanalyse, parallel=parallel)

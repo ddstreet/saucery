@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import sys
 
 from pathlib import Path
@@ -26,11 +27,14 @@ def main():
                         help="Squash the extracted sosreport (requires 'mksquashfs')")
     parser.add_argument('-M', '--mount', action='store_true',
                         help="Mount the squashed sosreport (requires 'squashfuse')")
+    parser.add_argument('--unmount', action='store_true',
+                        help="Unmount the squashed sosreport")
     parser.add_argument('-A', '--analyse', action='store_true',
                         help='Analyse the extracted/mounted sosreport')
     parser.add_argument('-U', '--menu', action='store_true',
                         help='Update the menu with current sosreports')
-    parser.action_attrs.extend(['extract', 'squash', 'mount', 'analyse', 'menu'])
+    parser.add_argument('--umount', action='store_true', dest='unmount', help=argparse.SUPPRESS)
+    parser.action_attrs.extend(['extract', 'squash', 'mount', 'analyse', 'menu', 'unmount'])
 
     parser.add_argument('sosreport', nargs='*', default=[],
                         help='Act on specific sosreports (implies --force)')
@@ -47,18 +51,21 @@ def main():
     else:
         parallel = opts.threads
 
-    saucier.cook(sosreports,
-                 force=opts.force or bool(opts.sosreport),
-                 parallel=parallel,
-                 extract=opts.extract,
-                 squash=opts.squash,
-                 mount=opts.mount,
-                 analyse=opts.analyse,
-                 update_menu=opts.menu)
-
-    if not opts.has_action:
-        for sosreport in sosreports:
-            print(sosreport)
+    if opts.has_action:
+        try:
+            saucier.cook(sosreports,
+                         force=opts.force or bool(opts.sosreport),
+                         parallel=parallel,
+                         extract=opts.extract,
+                         squash=opts.squash,
+                         mount=opts.mount,
+                         analyse=opts.analyse,
+                         update_menu=opts.menu)
+        finally:
+            if opts.unmount:
+                saucier.unmount(sosreports)
+    else:
+        saucier.print_sosreports(sosreports)
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ class SOSSquash(object):
     def squash(self):
         src = self.sos.filesdir
         dest = self.sos.squashimg
-        cmd = ['mksquashfs', str(src), str(dest)]
+        cmd = ['mksquashfs', str(src), str(dest), '-quiet', '-no-progress']
         result = subprocess.run(cmd, encoding='utf-8',
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.stdout.strip():
