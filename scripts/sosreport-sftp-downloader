@@ -156,11 +156,11 @@ class SaucerySFTPDownloader(object):
                             help=('Dump the configfile content, including any provided '
                                   'parameter settings, then exit without downloading. '
                                   'The output can be manually saved to the configfile.'))
-        parser.add_argument('--get-case',
+        parser.add_argument('--get-case', default=get_case,
                             help=('Program to run to get the case number. '
                                   'The single parameter is the remote sosreport path.%s' %
                                   (f" (default: '{get_case}')" if get_case else '')))
-        parser.add_argument('--get-customer',
+        parser.add_argument('--get-customer', default=get_customer,
                             help=('Program to run to get the customer name. '
                                   'The single parameter is the remote sosreport path.%s' %
                                   (f" (default: '{get_customer}')" if get_customer else '')))
