@@ -14,5 +14,6 @@ setup(
     ],
     scripts=[
         'scripts/saucier',
+        'scripts/sosreport-sftp-downloader',
     ],
 )

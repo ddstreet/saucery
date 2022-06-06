@@ -1,0 +1,219 @@
+#!/usr/bin/python3
+
+import argparse
+import configparser
+import dateparser
+import logging
+import paramiko
+import re
+
+from datetime import datetime
+from datetime import timezone
+from functools import cached_property
+from functools import partialmethod
+from io import StringIO
+from pathlib import Path
+from progress.bar import Bar
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+class SaucerySFTPDownloader(object):
+    CONFIGFILE = '~/.config/saucery/downloader.cfg'
+    CONFIGSECTION = 'sftp-downloader'
+    DEFAULT_MAX_AGE = '1 day'
+    DEFAULT_DESTINATION = '.'
+
+    def main(self):
+        log_level = logging.DEBUG if self.verbose else logging.INFO
+        logging.basicConfig(level=log_level, format='%(message)s')
+
+        if self.dump_config:
+            self._dump_config()
+            return
+
+        downloads = []
+        for pattern in self.regex:
+            LOGGER.debug(f"Checking pattern '{pattern}'")
+            downloads.extend(self._find_downloads(Path(pattern).parts))
+        total = len(downloads)
+        for index, (path, entry) in enumerate(downloads):
+            self._download(path, entry, index, total)
+
+    @property
+    def verbose(self):
+        return self.config.get('verbose')
+
+    @property
+    def dry_run(self):
+        return self.config.get('dry_run')
+
+    @property
+    def dump_config(self):
+        return self.config.get('dump_config')
+
+    @cached_property
+    def configfile(self):
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument('--configfile')
+        (opts, _) = parser.parse_known_args()
+        return Path(opts.configfile or self.CONFIGFILE).expanduser()
+
+    @property
+    def configsection(self):
+        return self.CONFIGSECTION
+
+    @property
+    def server(self):
+        return self.config.get('server')
+
+    @property
+    def username(self):
+        return self.config.get('username')
+
+    @property
+    def max_age(self):
+        return self.config.get('max_age')
+
+    @property
+    def regex(self):
+        return self.config.get('regex')
+
+    @property
+    def destination(self):
+        return self.config.get('destination')
+
+    @cached_property
+    def configparser(self):
+        parser = configparser.ConfigParser()
+        parser.add_section(self.configsection)
+        parser.read(self.configfile)
+        return parser
+
+    def _dump_config(self):
+        config = self.configparser[self.configsection]
+        config['server'] = self.server
+        config['username'] = self.username
+        if self.max_age != self._parse_timedelta(self.DEFAULT_MAX_AGE):
+            config['max_age'] = str(self.max_age)
+        if self.regex:
+            config['regex'] = '\n'.join(self.regex)
+        if not self.destination.samefile(self.DEFAULT_DESTINATION):
+            config['destination'] = str(self.destination)
+        with StringIO() as f:
+            self.configparser.write(f)
+            LOGGER.info(f.getvalue())
+
+    def _parse_timedelta(self, value, *, description=None):
+        parsed = dateparser.parse(f'{value} ago')
+        if parsed:
+            LOGGER.debug(f"Parsed '{value}' as '{parsed}'")
+        else:
+            raise ValueError(f"Failed to parse %s'{value}'" %
+                             (f'{description} ' if description else ''))
+        return (datetime.now(timezone.utc).replace(microsecond=0) -
+                parsed.astimezone(timezone.utc).replace(microsecond=0))
+
+    @cached_property
+    def config(self):
+        config = self.configparser[self.configsection]
+        server = config.get('server')
+        username = config.get('username')
+        max_age = config.get('max_age') or self.DEFAULT_MAX_AGE
+        regex = config.get('regex', '').split()
+        dest = config.get('destination') or self.DEFAULT_DESTINATION
+
+        epilog = ('The --regex parameter will ignore default (configfile) regex; '
+                  'use the --add-regex parameter to add additional patterns.')
+        parser = argparse.ArgumentParser(epilog=epilog)
+        parser.add_argument('-v', '--verbose', action='store_true',
+                            help='Be verbose.')
+        parser.add_argument('-n', '--dry-run', action='store_true',
+                            help="Dry-run mode.")
+        parser.add_argument('--configfile',
+                            help=f"Config file path (default: '{self.CONFIGFILE}').")
+        parser.add_argument('--dump-config', action='store_true',
+                            help=('Dump the configfile content, including any provided '
+                                  'parameter settings, then exit without downloading. '
+                                  'The output can be manually saved to the configfile.'))
+        parser.add_argument('-s', '--server', default=server, required=not server,
+                            help=('SFTP server to connect to%s.' %
+                                  (f" (default '{server}')" if server else '')))
+        parser.add_argument('-u', '--username', default=username, required=not username,
+                            help=('Username to use with server%s.' %
+                                  (f" (default '{username}')" if username else '')))
+        parser.add_argument('--max-age', default=max_age,
+                            help=f"Max sosreport age to download (default '{max_age}').")
+        parser.add_argument('-r', '--regex', action='append', default=[],
+                            help=('File regex pattern(s) to use%s.' %
+                                  (f" (default: '{','.join(regex)}')" if regex else '')))
+        parser.add_argument('-R', '--add-regex', action='append', default=[],
+                            help='File regex pattern(s) to use in addition to --regex patterns.')
+        parser.add_argument('destination', nargs='?', default=dest,
+                            help=f"Path to download sosreport(s) to (default: '{dest}').")
+
+        opts = parser.parse_args()
+
+        max_age = self._parse_timedelta(opts.max_age, description='max age')
+
+        regex = list(set(opts.regex or regex) | set(opts.add_regex))
+
+        return {
+            'verbose': opts.verbose,
+            'dry_run': opts.dry_run,
+            'dump_config': opts.dump_config,
+            'server': opts.server,
+            'username': opts.username,
+            'max_age': max_age,
+            'regex': regex,
+            'destination': Path(opts.destination),
+        }
+
+    @cached_property
+    def sftp(self):
+        client = paramiko.client.SSHClient()
+        client.load_system_host_keys()
+        client.connect(self.server, username=self.username,
+                       disabled_algorithms={'pubkeys': ['rsa-sha2-256', 'rsa-sha2-512']})
+        return client.open_sftp()
+
+    def _find_downloads(self, parts, path=Path('.')):
+        pattern = parts[0]
+        remaining = parts[1:]
+        for entry in self.sftp.listdir_attr(path=str(path)):
+            if re.match(pattern, entry.filename):
+                newpath = path / entry.filename
+                LOGGER.debug(f'Checking path {newpath}')
+                if remaining:
+                    yield from self._find_downloads(remaining, newpath)
+                elif self.entry_age(entry) <= self.max_age:
+                    yield (newpath, entry)
+                else:
+                    LOGGER.debug(f'Skipping file with age {self.entry_age(entry)}')
+
+    def entry_age(self, e):
+        return datetime.now() - datetime.fromtimestamp(e.st_mtime)
+
+    def _download(self, path, entry, index, total):
+        self.destination.mkdir(parents=True, exist_ok=True)
+        lpath = self.destination / entry.filename
+        if lpath.exists():
+            LOGGER.info(f"Skipping already downloaded sosreport '{lpath.name}'")
+            return
+        LOGGER.debug(f"Downloading '{path}' to '{self.destination}'")
+        if self.dry_run:
+            return
+        suffix = f'%(percent)d%% (%(index)d/%(max)d) [file {index}/{total}]'
+        with Bar(path.name, suffix=suffix, max=entry.st_size) as bar:
+            last = [0]
+            def callback(n, l):
+                bar.next(n - l[0])
+                l[0] = n
+            with lpath.open('wb') as dest:
+                self.sftp.getfo(str(path), dest,
+                                callback=lambda n, _: callback(n, last))
+
+
+if __name__ == '__main__':
+    SaucerySFTPDownloader().main()

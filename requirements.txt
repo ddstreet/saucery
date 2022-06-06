@@ -1,2 +1,7 @@
 python-magic
 pyyaml
+
+# requirements only for sosreport-sftp-downloader script:
+dateparser
+paramiko
+progress
