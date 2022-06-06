@@ -204,7 +204,7 @@ class SaucerySFTPDownloader(object):
         LOGGER.debug(f"Downloading '{path}' to '{self.destination}'")
         if self.dry_run:
             return
-        suffix = f'%(percent)d%% (%(index)d/%(max)d) [file {index}/{total}]'
+        suffix = f'%(percent)d%% (%(index)d/%(max)d) [file {index+1}/{total}]'
         with Bar(path.name, suffix=suffix, max=entry.st_size) as bar:
             last = [0]
             def callback(n, l):
