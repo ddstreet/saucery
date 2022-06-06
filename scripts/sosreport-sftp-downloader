@@ -184,10 +184,11 @@ class SaucerySFTPDownloader(object):
         for entry in self.sftp.listdir_attr(path=str(path)):
             if re.match(pattern, entry.filename):
                 newpath = path / entry.filename
-                LOGGER.debug(f'Checking path {newpath}')
+                LOGGER.info(f'Checking path {newpath}')
                 if remaining:
                     yield from self._find_downloads(remaining, newpath)
                 elif self.entry_age(entry) <= self.max_age:
+                    LOGGER.info(f'Adding: {newpath}')
                     yield (newpath, entry)
                 else:
                     LOGGER.debug(f'Skipping file with age {self.entry_age(entry)}')
