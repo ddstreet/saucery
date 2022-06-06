@@ -167,6 +167,11 @@ function LimitLength(value, length) {
 function ConclusionsSummary(conclusions) {
     let p = $('<p>');
 
+    if (!conclusions) {
+        $('<a>').text('?').appendTo(p);
+        return p;
+    }
+
     if (conclusions.critical > 0)
         p.append($('<a>').text('Critical: ' + conclusions.critical).addClass('critical')).append('<br>');
     if (conclusions.error > 0)
