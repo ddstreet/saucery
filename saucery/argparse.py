@@ -1,6 +1,7 @@
 
 import argparse
 import logging
+import sys
 
 from . import Saucery
 
@@ -39,7 +40,9 @@ class SauceryArgumentParser(argparse.ArgumentParser):
 
         opts.has_action = any([bool(getattr(opts, attr)) for attr in self.action_attrs])
 
-        logging.basicConfig(level=opts.loglevel or logging.INFO, format='%(message)s')
+        logging.basicConfig(stream=sys.stdout,
+                            level=opts.loglevel or logging.INFO,
+                            format='%(message)s')
 
         LOGGER.debug(f'params: {vars(opts)}')
 

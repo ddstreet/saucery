@@ -34,7 +34,7 @@ class SaucerySFTPDownloader(object):
 
     def main(self):
         log_level = logging.DEBUG if self.verbose else logging.INFO
-        logging.basicConfig(level=log_level, format='%(message)s')
+        logging.basicConfig(stream=sys.stdout, level=log_level, format='%(message)s')
 
         if self.dump_config:
             self._dump_config()
