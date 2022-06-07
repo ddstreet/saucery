@@ -50,8 +50,8 @@ class SaucerySFTPDownloader(object):
             LOGGER.debug(f"Checking pattern '{pattern}'")
             downloads.extend(self._find_downloads(Path(pattern).parts))
         total = len(downloads)
-        for index, (path, entry) in enumerate(downloads):
-            self._download(path, entry, index, total)
+        for index, path in enumerate(downloads):
+            self._download(path, index, total)
 
     @property
     def verbose(self):
@@ -202,39 +202,51 @@ class SaucerySFTPDownloader(object):
         client.load_system_host_keys()
         client.connect(self.server, username=self.username,
                        disabled_algorithms={'pubkeys': ['rsa-sha2-256', 'rsa-sha2-512']})
+        client.get_transport().set_keepalive(30)
         return client.open_sftp()
+
+    @property
+    def sftp_logging(self):
+        return self.config.get('sftp_logging')
 
     def _find_downloads(self, parts, path=Path('.')):
         pattern = parts[0]
         remaining = parts[1:]
-        for entry in self.sftp.listdir_attr(path=str(path)):
-            if re.match(pattern, entry.filename):
-                newpath = path / entry.filename
+        for filename in self.sftp.listdir(path=str(path)):
+            newpath = path / filename
+
+            if not re.match(pattern, filename):
+                LOGGER.debug(f'Ignoring path {newpath}')
+                continue
+
+            if remaining:
                 LOGGER.info(f'Checking path {newpath}')
-                if remaining:
-                    yield from self._find_downloads(remaining, newpath)
-                elif self.entry_age(entry) <= self.max_age:
-                    LOGGER.info(f'Adding: {newpath}')
-                    yield (newpath, entry)
-                else:
-                    LOGGER.debug(f'Skipping file with age {self.entry_age(entry)}')
+                yield from self._find_downloads(remaining, newpath)
+                continue
 
-    def entry_age(self, e):
-        return datetime.now() - datetime.fromtimestamp(e.st_mtime)
+            LOGGER.info(f'Adding file {newpath}')
+            yield newpath
 
-    def _download(self, path, entry, index, total):
+    def _download(self, path, index, total):
         try:
-            sos = self.saucery.sosreport(entry.filename)
+            sos = self.saucery.sosreport(path.name)
         except ValueError:
-            LOGGER.error(f"Skipping sosreport with invalid name '{entry.filename}'")
+            LOGGER.error(f"Skipping sosreport with invalid name: '{path.name}'")
+            return None
         if sos.exists():
-            LOGGER.info(f"Skipping already downloaded sosreport '{entry.filename}'")
-            return
+            LOGGER.debug(f"Skipping already downloaded sosreport: '{path.name}'")
+            return None
+        stat = self.sftp.stat(str(path))
+        age = datetime.now() - datetime.fromtimestamp(stat.st_mtime)
+        if age > self.max_age:
+            LOGGER.debug(f"Skipping sosreport with age '{age}': '{path.name}'")
+            return None
         LOGGER.debug(f"Downloading '{path}' to '{sos}'")
         if self.dry_run:
-            return
+            return None
+        name = (path.name[:39] + '\u2026') if len(path.name) > 40 else path.name
         suffix = f'%(percent)d%% (%(index)d/%(max)d) [file {index+1}/{total}]'
-        with Bar(path.name, suffix=suffix, max=entry.st_size) as bar:
+        with Bar(name, suffix=suffix, max=stat.st_size) as bar:
             last = [0]
             def callback(n, l):
                 bar.next(n - l[0])
@@ -250,16 +262,21 @@ class SaucerySFTPDownloader(object):
             LOGGER.debug(f'No configured program to get {name}, skipping')
             return
         cmd = [cmd, str(path)]
-        result = subprocess.run(cmd, encoding='utf-8',
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            result = subprocess.run(cmd, encoding='utf-8',
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+        except subprocess.SubprocessError as e:
+            LOGGER.error(f"Failed to get {name} for '{path}': {e}")
+            return
         if result.returncode != 0:
             LOGGER.error(f"Failed to get {name} for '{path}'")
             if result.stderr.strip():
                 LOGGER.error(result.stderr)
-        else:
-            value = result.stdout.strip()
-            LOGGER.debug(f"Using {name} '{value}' for '{path}'")
-            setattr(sos, name, value)
+            return
+        value = result.stdout.strip()
+        LOGGER.debug(f"Using {name} '{value}' for '{path}'")
+        setattr(sos, name, value)
 
     def _get_case(self, sos, path):
         self._get_field('case', sos, path)
