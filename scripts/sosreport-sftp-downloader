@@ -36,6 +36,9 @@ class SaucerySFTPDownloader(object):
         log_level = logging.DEBUG if self.verbose else logging.INFO
         logging.basicConfig(stream=sys.stdout, level=log_level, format='%(message)s')
 
+        if not self.sftp_logging:
+            logging.getLogger('paramiko').propagate = False
+
         if self.dump_config:
             self._dump_config()
             return
@@ -148,6 +151,8 @@ class SaucerySFTPDownloader(object):
         parser = argparse.ArgumentParser(epilog=epilog)
         parser.add_argument('-v', '--verbose', action='store_true',
                             help='Be verbose.')
+        parser.add_argument('--sftp-logging', action='store_true',
+                            help='Show SFTP logging.')
         parser.add_argument('-n', '--dry-run', action='store_true',
                             help="Dry-run mode.")
         parser.add_argument('--configfile',
@@ -186,6 +191,7 @@ class SaucerySFTPDownloader(object):
 
         return {
             'verbose': opts.verbose,
+            'sftp_logging': opts.sftp_logging,
             'dry_run': opts.dry_run,
             'dump_config': opts.dump_config,
             'get_case': opts.get_case,
