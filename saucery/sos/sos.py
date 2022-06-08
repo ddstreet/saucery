@@ -364,7 +364,6 @@ class SOS(SauceryBase):
 
         self.lookup_case()
         self.lookup_customer()
-        self.lookup_meta()
 
         a = SOSAnalysis(self)
         try:
@@ -403,28 +402,12 @@ class SOS(SauceryBase):
         if self.customer:
             LOGGER.info(f"Set 'customer' to '{self.customer}' based on lookup: {self.name}")
 
-    @cached_property
-    def meta(self):
-        return SOSMetaDict(self, self.config.get('meta', '').split())
-
-    def lookup_meta(self):
-        lookedup = []
-        for key in self.meta.keys():
-            if self.meta.get(key):
-                LOGGER.debug(f"Already have meta '{key}', skipping: {self.name}")
-                continue
-            self.meta[key] = self.lookup(f'meta_{key}')
-            if self.meta.get(key):
-                lookedup.append(key)
-        if lookedup:
-            LOGGER.info(f"Looked up meta values '{','.join(lookedup)}': {self.name}")
-
     def lookup(self, key):
         cmd = self.config.get(key)
         if not cmd:
             LOGGER.debug(f"No config for '{key}', skipping: {self.name}")
             return None
-        cmd = [c.format_map(ChainMap({'meta': ''}, vars(self))) for c in cmd.split()]
+        cmd = [c.format_map(vars(self)) for c in cmd.split()]
         cmdstr = ' '.join(cmd)
 
         LOGGER.debug(f"Lookup for '{key}': {cmdstr}")
