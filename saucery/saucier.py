@@ -38,9 +38,8 @@ class Saucier(SauceryBase):
             sosreports = self.sosreports
         for sos in map(self.sosreport, sosreports):
             if LOGGER.isEnabledFor(logging.DEBUG):
-                state = ','.join([s for s in
-                                  ['invalid', 'extracted', 'squashed', 'mounted']
-                                  if getattr(sos, s, False)])
+                states = ['invalid', 'extracted', 'squashed', 'mounted', 'analysed']
+                state = ','.join([s for s in states if getattr(sos, s, False)])
             else:
                 state = ''
             if state:
