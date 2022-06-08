@@ -7,12 +7,12 @@ from contextlib import suppress
 from copy import copy
 
 
-class SOSMetaProperty(property):
+class FileProperty(property):
     def __new__(cls, name, valuetype=str, **kwargs):
         if valuetype == bool:
-            cls = BoolSOSMetaProperty
+            cls = BoolFileProperty
         if isinstance(valuetype, str) and valuetype.lower() == 'json':
-            cls = JSONSOSMetaProperty
+            cls = JSONFileProperty
         return super().__new__(cls)
 
     def __init__(self, name, valuetype=str, valuelist=False):
@@ -80,7 +80,7 @@ class SOSMetaProperty(property):
             self.path(sos).unlink(missing_ok=True)
 
 
-class BoolSOSMetaProperty(SOSMetaProperty):
+class BoolFileProperty(FileProperty):
     def valuetype(self, *args):
         return args and str(args[0]).strip().lower() == 'true'
 
@@ -88,7 +88,7 @@ class BoolSOSMetaProperty(SOSMetaProperty):
         return str(value is True)
 
 
-class JSONSOSMetaProperty(SOSMetaProperty):
+class JSONFileProperty(FileProperty):
     def value(self, strvalue):
         if not strvalue:
             return ''
@@ -100,36 +100,30 @@ class JSONSOSMetaProperty(SOSMetaProperty):
         return json.dumps(value, indent=2)
 
 
-class SOSMetaDict(MutableMapping):
-    def __init__(self, sos, keys):
-        super().__init__()
-        self._keys = copy(keys)
+class DirDict(MutableMapping):
+    def __init__(self, path):
+        self._path = Path(path)
 
-        class SOSMeta():
-            dry_run = sos.dry_run
-            workdir = sos.workdir
-
-        for k in keys:
-            setattr(SOSMeta, k, SOSMetaProperty(k))
-        self.meta = SOSMeta()
+    def _file(self, key):
+        return self._path / key
 
     def __getitem__(self, key):
-        if key not in self._keys:
+        try:
+            return self._file(key).read_text()
+        except FileNotFoundError:
             raise KeyError(key)
-        return getattr(self.meta, key)
 
     def __setitem__(self, key, value):
-        if key not in self._keys:
-            raise KeyError(key)
-        setattr(self.meta, key, value)
+        self._path.mkdir(exist_ok=True)
+        self._file(key).write_text(value)
 
     def __delitem__(self, key):
-        if key not in self._keys:
-            raise KeyError(key)
-        delattr(self.meta, key)
+        self._file(key).unlink(missing_ok=True)
 
     def __iter__(self):
-        return iter(self._keys)
+        if self._path.exists():
+            return (f.name for f in self._path.iterdir())
+        return []
 
     def __len__(self):
-        return len(self._keys)
+        return len(self)

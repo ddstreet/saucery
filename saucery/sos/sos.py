@@ -19,8 +19,8 @@ from .analyse import SOSAnalysis
 from .analyse import SOSAnalysisError
 from .extract import SOSExtraction
 from .extract import SOSExtractionError
-from .meta import SOSMetaDict
-from .meta import SOSMetaProperty
+from .persistent import DirDict
+from .persistent import FileProperty
 from .squash import SOSSquash
 from .squash import SOSSquashError
 
@@ -158,10 +158,10 @@ class SOS(SauceryBase):
             result['conclusions'] = conclusions
         return result
 
-    invalid = SOSMetaProperty('invalid', bool)
-    extracted = SOSMetaProperty('extracted', bool)
-    files_json = SOSMetaProperty('files.json', 'json')
-    total_size = SOSMetaProperty('total_size', int)
+    invalid = FileProperty('invalid', bool)
+    extracted = FileProperty('extracted', bool)
+    files_json = FileProperty('files.json', 'json')
+    total_size = FileProperty('total_size', int)
 
     def extract(self, *args, **kwargs):
         self._extract(*args, **kwargs)
@@ -219,7 +219,7 @@ class SOS(SauceryBase):
     def squashimg(self):
         return self.workdir / 'squash.img'
 
-    squashed = SOSMetaProperty('squashed', bool)
+    squashed = FileProperty('squashed', bool)
 
     def squash(self, *args, **kwargs):
         self._squash(*args, **kwargs)
@@ -335,8 +335,8 @@ class SOS(SauceryBase):
 
         self.filesdir.rmdir()
 
-    analysed = SOSMetaProperty('analysed', bool)
-    conclusions = SOSMetaProperty('conclusions', 'json')
+    analysed = FileProperty('analysed', bool)
+    conclusions = FileProperty('conclusions', 'json')
 
     def analyse(self, *args, **kwargs):
         self._analyse(*args, **kwargs)
@@ -378,7 +378,7 @@ class SOS(SauceryBase):
         self.conclusions = a.conclusions
         self.analysed = True
 
-    case = SOSMetaProperty('case')
+    case = FileProperty('case')
 
     def lookup_case(self):
         if self.case:
@@ -392,7 +392,7 @@ class SOS(SauceryBase):
         if self.case:
             LOGGER.info(f"Set 'case' to '{self.case}' based on filename: {self.name}")
 
-    customer = SOSMetaProperty('customer')
+    customer = FileProperty('customer')
 
     def lookup_customer(self):
         if self.customer:
