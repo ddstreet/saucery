@@ -60,11 +60,17 @@ class Saucier(SauceryBase):
         LOGGER.info(f'Starting processing {len(sosreports)} sosreports...')
         with futures.ThreadPoolExecutor(max_workers=int(parallel)) as executor:
             submissions = {executor.submit(action, s): s for s in sosreports}
-            while any(map(lambda f: f.running(), submissions)):
+            while any(map(lambda future: future.running(), submissions)):
                 (_, not_done) = futures.wait(submissions, timeout=60)
-                for (i, r) in enumerate(not_done):
-                    sos = submissions.get(r)
-                    LOGGER.info(f'Still processing [{i}/{len(not_done)}]: {sos.name}')
+                for (index, future) in enumerate(not_done):
+                    sos = submissions.get(future)
+                    LOGGER.info(f'Still processing [{index+1}/{len(not_done)}]: {sos.name}')
+            for future in submissions:
+                e = future.exception()
+                if e:
+                    sos = submissions.get(future)
+                    LOGGER.error(f'Error processing {sos}: {e}')
+                    LOGGER.exception(e)
         LOGGER.info(f'Finished processing {len(sosreports)} sosreports')
 
     def _process(self, sosreport, *,
