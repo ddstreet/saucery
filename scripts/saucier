@@ -53,14 +53,14 @@ def main():
 
     if opts.has_action:
         try:
-            saucier.cook(sosreports,
-                         force=opts.force or bool(opts.sosreport),
-                         parallel=parallel,
-                         extract=opts.extract,
-                         squash=opts.squash,
-                         mount=opts.mount,
-                         analyse=opts.analyse,
-                         update_menu=opts.menu)
+            saucier.process(sosreports,
+                            force=opts.force or bool(opts.sosreport),
+                            parallel=parallel,
+                            extract=opts.extract,
+                            squash=opts.squash,
+                            mount=opts.mount,
+                            analyse=opts.analyse,
+                            update_menu=opts.menu)
         finally:
             if opts.unmount:
                 saucier.unmount(sosreports)
