@@ -5,6 +5,7 @@ import subprocess
 import tarfile
 import tempfile
 
+from contextlib import suppress
 from functools import cached_property
 from pathlib import Path
 
@@ -20,6 +21,7 @@ class SOSExtraction(object):
     '''Extract SOS object (tarball) to SOS files/ dir.'''
     def __init__(self, sos):
         self._sos = sos
+        self._members = {}
 
     @property
     def _journal_output_path(self):
@@ -30,7 +32,7 @@ class SOSExtraction(object):
     def sos(self):
         return self._sos
 
-    @cached_property
+    @property
     def members(self):
         '''Extracted member data.
 
@@ -44,7 +46,7 @@ class SOSExtraction(object):
         - size (file size, only for 'file' types)
         - link (link target, only for 'link' types)
         '''
-        return []
+        return list(self._members.values())
 
     def get_members(self, membertype):
         return [m for m in self.members if m.get('type') == membertype]
@@ -86,7 +88,7 @@ class SOSExtraction(object):
         with tarfile.open(self.sos.sosreport) as tar:
             for m in tar:
                 member = SOSExtractionMember(dest, m)
-                self.members.append(member)
+                self._members[member.get('path')] = dict(member)
                 if not toplevel:
                     toplevel = member.toplevel
                 if toplevel != member.toplevel:
@@ -139,6 +141,12 @@ class SOSExtraction(object):
             if result.stderr.strip():
                 self.error(result.stderr)
             return False
+        self._members[self._journal_output_path] = {
+            'name': output.name,
+            'path': self._journal_output_path,
+            'type': 'file',
+            'size': output.stat().st_size,
+        }
         return True
 
     def _remove_journal(self, dest):
@@ -149,6 +157,9 @@ class SOSExtraction(object):
                 shutil.rmtree(path)
             except Exception as e:
                 self.error(f'Failed to remove journal dir {jpath}: {e}')
+        members = (m for m in self.members if m.get('path').startswith(jpath))
+        for m in members:
+            self._members.pop(m.get('path'))
 
     def _log(self, lvl, fmt, *args):
         LOGGER.log(lvl, f'{fmt}: {self.sos.name}', *args)
