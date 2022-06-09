@@ -4,7 +4,6 @@ import json
 
 from collections.abc import MutableMapping
 from contextlib import suppress
-from copy import copy
 from pathlib import Path
 
 

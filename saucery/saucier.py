@@ -68,8 +68,8 @@ class Saucier(SauceryBase):
         LOGGER.info(f'Finished processing {len(sosreports)} sosreports')
 
     def _process(self, sosreport, *,
-              extract=False, squash=False, mount=False, analyse=False,
-              force=False):
+                 extract=False, squash=False, mount=False, analyse=False,
+                 force=False):
         if extract:
             sosreport.extract(reextract=force)
         if squash:

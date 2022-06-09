@@ -5,7 +5,6 @@ import re
 import shutil
 import subprocess
 
-from collections import ChainMap
 from datetime import datetime
 from functools import cached_property
 from itertools import chain
