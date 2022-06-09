@@ -56,8 +56,16 @@ class Saucier(SauceryBase):
 
         if parallel is True:
             parallel = len(os.sched_getaffinity(0))
+
+        LOGGER.info(f'Starting processing {len(sosreports)} sosreports...')
         with futures.ThreadPoolExecutor(max_workers=int(parallel)) as executor:
-            executor.map(action, sosreports)
+            submissions = {executor.submit(action, s): s for s in sosreports}
+            while any(map(lambda f: f.running(), submissions)):
+                (_, not_done) = futures.wait(submissions, timeout=60)
+                for (i, r) in enumerate(not_done):
+                    sos = submissions.get(r)
+                    LOGGER.info(f'Still processing [{i}/{len(not_done)}]: {sos.name}')
+        LOGGER.info(f'Finished processing {len(sosreports)} sosreports')
 
     def _process(self, sosreport, *,
               extract=False, squash=False, mount=False, analyse=False,
