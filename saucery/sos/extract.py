@@ -99,7 +99,7 @@ class SOSExtraction(object):
         return dest / toplevel
 
     def _extract_member(self, tar, member):
-        path = member.member_path
+        path = member.path
         if member.invalid_path:
             self.warning(f"Skipping invalid member path '{path}'")
         elif member.invalid_link:
@@ -181,7 +181,7 @@ class SOSExtractionMember(dict):
     def __init__(self, dest, member):
         self._dest = dest
         self._member = member
-        d = {'name': self.name, 'path': str(self.member_path), 'type': self.type}
+        d = {'name': self.name, 'path': str(self.path), 'type': self.type}
         if self.type == 'file':
             d['size'] = self.member.size
         if self.type == 'link':
@@ -202,18 +202,18 @@ class SOSExtractionMember(dict):
         return Path(self.member.name).parts[0]
 
     @cached_property
-    def member_path(self):
+    def path(self):
         '''The member path, without the top-level dir'''
         return Path(*Path(self.member.name).parts[1:])
 
     @cached_property
-    def path(self):
+    def full_path(self):
         '''The full, resolved path including the dest path'''
         return self.dest.joinpath(self.member.name).resolve()
 
     @property
     def name(self):
-        return self.member_path.name
+        return self.path.name
 
     @property
     def type(self):
@@ -233,17 +233,17 @@ class SOSExtractionMember(dict):
 
     @property
     def invalid_path(self):
-        return not str(self.path).startswith(str(self.dest))
+        return not str(self.full_path).startswith(str(self.dest))
 
     @property
     def invalid_link(self):
         if self.type != 'link':
             return False
-        linkpath = self.path.parent.joinpath(self.member.linkname).resolve()
+        linkpath = self.full_path.parent.joinpath(self.member.linkname).resolve()
         return not str(linkpath).startswith(str(self.dest))
 
     def extract_dir(self):
-        self.path.mkdir(mode=0o775)
+        self.full_path.mkdir(mode=0o775)
         return True
 
     def extract_file(self, tar):
@@ -252,12 +252,12 @@ class SOSExtractionMember(dict):
         if toffset != moffset:
             LOGGER.warning(f'tar offset {toffset} != member data offset {moffset}')
             tar.fileobj.seek(moffset)
-        self.path.write_bytes(tar.fileobj.read(self.member.size))
-        self.path.chmod(self.path.stat().st_mode | 0o644)
+        self.full_path.write_bytes(tar.fileobj.read(self.member.size))
+        self.full_path.chmod(self.full_path.stat().st_mode | 0o644)
         return True
 
     def extract_link(self):
-        self.path.symlink_to(self.member.linkname)
+        self.full_path.symlink_to(self.member.linkname)
         return True
 
     def extract(self, tar):
