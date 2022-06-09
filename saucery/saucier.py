@@ -101,7 +101,7 @@ class Saucier(SauceryBase):
         self.process(sosreports, mount=True, force=remount, parallel=parallel)
 
     def unmount(self, sosreports):
-        for s in sosreports:
+        for s in map(self.sosreport, sosreports):
             s.unmount()
 
     def analyse(self, sosreports, *, parallel=False, reanalyse=False):
