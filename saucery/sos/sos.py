@@ -337,6 +337,12 @@ class SOS(SauceryBase):
 
     analysed = FileProperty('analysed', bool)
     conclusions = FileProperty('conclusions', 'json')
+    case = FileProperty('case')
+    customer = FileProperty('customer')
+
+    @cached_property
+    def external_analysis(self):
+        return DirDict(self.workdir / 'external_analysis')
 
     def analyse(self, *args, **kwargs):
         self._analyse(*args, **kwargs)
@@ -361,9 +367,8 @@ class SOS(SauceryBase):
 
         self.analysed = False
         del self.conclusions
-
-        self.lookup_case()
-        self.lookup_customer()
+        self.external_analysis.clear()
+        # Note, we keep existing case/customer values here
 
         a = SOSAnalysis(self)
         try:
@@ -375,54 +380,17 @@ class SOS(SauceryBase):
 
         LOGGER.info(f'Finished analysing sosreport: {self.name}')
 
-        self.conclusions = a.conclusions
-        self.analysed = True
-
-    case = FileProperty('case')
-
-    def lookup_case(self):
+        # Don't replace case/customer values if set, since that info may have
+        # been manually set and/or not 'detectable' from only the sosreport
         if self.case:
             LOGGER.debug(f"Already have 'case', skipping lookup: {self.name}")
-            return
-        self.case = self.lookup('case')
-        if self.case:
-            LOGGER.info(f"Set 'case' to '{self.case}' based on lookup: {self.name}")
-            return
-        self.case = self._sosreport_match.group('case')
-        if self.case:
-            LOGGER.info(f"Set 'case' to '{self.case}' based on filename: {self.name}")
-
-    customer = FileProperty('customer')
-
-    def lookup_customer(self):
+        else:
+            self.case = a.case
         if self.customer:
             LOGGER.debug(f"Already have 'customer', skipping lookup: {self.name}")
-            return
-        self.customer = self.lookup('customer')
-        if self.customer:
-            LOGGER.info(f"Set 'customer' to '{self.customer}' based on lookup: {self.name}")
+        else:
+            self.customer = a.customer
 
-    def lookup(self, key):
-        cmd = self.config.get(key)
-        if not cmd:
-            LOGGER.debug(f"No config for '{key}', skipping: {self.name}")
-            return None
-        cmd = [c.format_map(vars(self)) for c in cmd.split()]
-        cmdstr = ' '.join(cmd)
-
-        LOGGER.debug(f"Lookup for '{key}': {cmdstr}")
-        try:
-            result = subprocess.run(cmd, encoding='utf-8',
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.SubprocessException:
-            LOGGER.exception(f"Error running '{cmdstr}': {self.name}")
-            return None
-
-        if result.returncode != 0:
-            LOGGER.error(f"Error ({result.returncode}) running '{cmdstr}': {self.name}")
-            if result.stderr.strip():
-                LOGGER.error(result.stderr)
-            return None
-
-        LOGGER.debug(f"Looked up '{key}': {self.name}")
-        return result.stdout
+        self.external_analysis.update(a.external)
+        self.conclusions = a.conclusions
+        self.analysed = True

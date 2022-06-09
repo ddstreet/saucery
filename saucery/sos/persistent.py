@@ -5,6 +5,7 @@ import json
 from collections.abc import MutableMapping
 from contextlib import suppress
 from copy import copy
+from pathlib import Path
 
 
 class FileProperty(property):
@@ -121,9 +122,9 @@ class DirDict(MutableMapping):
         self._file(key).unlink(missing_ok=True)
 
     def __iter__(self):
-        if self._path.exists():
+        with suppress(FileNotFoundError):
             return (f.name for f in self._path.iterdir())
-        return []
+        return iter([])
 
     def __len__(self):
         return len(self)
