@@ -122,7 +122,7 @@ class DirDict(MutableMapping):
         self._file(key).unlink(missing_ok=True)
 
     def __iter__(self):
-        with suppress(FileNotFoundError):
+        if self._path.is_dir():
             return (f.name for f in self._path.iterdir())
         return iter([])
 
