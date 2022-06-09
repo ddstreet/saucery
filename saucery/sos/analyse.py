@@ -4,7 +4,9 @@ import magic
 import os
 import re
 import shutil
+import subprocess
 
+from contextlib import suppress
 from functools import cached_property
 
 
@@ -18,24 +20,42 @@ class SOSAnalysisError(Exception):
 class SOSAnalysis(object):
     def __init__(self, sos):
         self.sos = sos
-        self.conclusions = []
 
     @property
     def name(self):
         return self.sos.name
 
     def analyse(self):
-        self.detect_newlines()
-        self.get_conclusions()
+        '''Perform all analysis.
 
-    def get_conclusions(self):
-        if not self.conclusions:
-            for a in self.sos.reductions.analyses:
-                LOGGER.debug(f'Getting conclusion for {a.name}: {self.name}')
-                try:
-                    self.conclusions.append(dict(a.conclusion))
-                except Exception:
-                    LOGGER.exception(f'Analysis {a.name} failed, skipping')
+        This only performs case/customer detection if the attribute is not currently set
+        for the sosreport, and only performs external analysis if external_analysis_keys
+        is configured with key names.
+        '''
+        LOGGER.debug(f'Detecting newlines: {self.name}')
+        self.detect_newlines()
+        LOGGER.debug(f'Gathering conclusions: {self.name}')
+        self.conclusions
+        if not self.sos.case:
+            LOGGER.debug(f'Detecting case: {self.name}')
+            self.case
+        if not self.sos.customer:
+            LOGGER.debug(f'Detecting customer: {self.name}')
+            self.customer
+        if self.external_keys:
+            LOGGER.debug(f'Performing external analysis: {self.name}')
+            self.external
+
+    def _get_conclusion(self, analysis):
+        LOGGER.debug(f'Getting conclusion for {analysis.name}: {self.name}')
+        with suppress(Exception):
+            return dict(analysis.conclusion)
+        LOGGER.exception(f'Analysis {analysis.name} failed, skipping')
+        return None
+
+    @cached_property
+    def conclusions(self):
+        return [c for c in map(self._get_conclusion, self.sos.reductions.analyses) if c]
 
     def detect_newlines(self):
         if self.sos.linesdir.exists() and not self.sos.dry_run:
@@ -66,7 +86,7 @@ class SOSAnalysis(object):
 
     @cached_property
     def case(self):
-        case = self.get_case_from_config_lookup() or self.detect_case_from_filename()
+        case = self.get_case_from_config_lookup() or self.get_case_from_filename()
         if not case:
             LOGGER.debug(f'Could not detect case: {self.name}')
         return case
@@ -75,13 +95,13 @@ class SOSAnalysis(object):
         case = self.run_config_lookup('case')
         if case:
             LOGGER.info(f"Got case '{case}' based on configured lookup: {self.name}")
-            return case
+        return case
 
     def get_case_from_filename(self):
         case = self.sos._sosreport_match.group('case')
         if case:
             LOGGER.info(f"Got case '{case}' based on filename: {self.name}")
-            return case
+        return case
 
     @cached_property
     def customer(self):
@@ -94,15 +114,18 @@ class SOSAnalysis(object):
         customer = self.run_config_lookup('customer')
         if customer:
             LOGGER.info(f"Set 'customer' to '{customer}' based on configured lookup: {self.name}")
-            return customer
+        return customer
+
+    @cached_property
+    def external_keys(self):
+        return self.sos.config.get('external_analysis_keys', '').split()
 
     @cached_property
     def external(self):
-        keys = self.sos.config.get('external_analysis_keys', '').split()
-        if not keys:
+        if not self.external_keys:
             LOGGER.debug(f'No external analysis keys defined: {self.name}')
             return {}
-        return {k: self.run_config_lookup(k) for k in keys}
+        return {k: self.run_config_lookup(k) for k in self.external_keys}
 
     def run_config_lookup(self, key):
         cmd = self.sos.config.get(f'lookup_{key}')
