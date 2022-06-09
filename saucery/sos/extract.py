@@ -111,23 +111,19 @@ class SOSExtraction(object):
         if self._extract_journal(path):
             self._remove_journal(path)
 
-    def _read_machineid(self, dest):
-        try:
-            path = dest.joinpath('etc/machine-id')
-        except FileNotFoundError:
-            path = dest.joinpath('var/lib/dbus/machine-id')
-        return path.read_text().strip()
-
     def _extract_journal(self, dest):
-        try:
-            machine_id = self._read_machineid(dest)
-        except FileNotFoundError:
+        machineid = None
+        with suppress(FileNotFoundError):
+            machineid = dest.joinpath('etc/machine-id').read_text().strip()
+        with suppress(FileNotFoundError):
+            machineid = dest.joinpath('var/lib/dbus/machine-id').read_text().strip()
+        if not machineid:
             self.info('Could not find machine-id, skipping journal processing')
             return False
 
-        journaldir = dest / 'var/log/journal' / machine_id
+        journaldir = dest / 'var/log/journal' / machineid
         if not journaldir.exists():
-            self.info(f'No journal dir for {machine_id}, skipping journal processing')
+            self.info(f'No journal dir for {machineid}, skipping journal processing')
             return False
 
         self.info('Converting binary journals to text')
