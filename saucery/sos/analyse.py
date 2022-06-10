@@ -33,17 +33,19 @@ class SOSAnalysis(object):
         for the sosreport, and only performs external analysis if external_analysis_keys
         is configured with key names.
         '''
-        LOGGER.debug(f'Gathering conclusions: {self.name}')
-        self.conclusions
         if not self.sos.case:
             LOGGER.debug(f'Detecting case: {self.name}')
             self.case
         if not self.sos.customer:
             LOGGER.debug(f'Detecting customer: {self.name}')
             self.customer
+        # Note - need to perform external analysis *first*, as our built-in analysis
+        # might reference the external results
         if self.external_keys:
             LOGGER.debug(f'Performing external analysis: {self.name}')
             self.external
+        LOGGER.debug(f'Gathering conclusions: {self.name}')
+        self.conclusions
 
     def _get_conclusion(self, analysis):
         LOGGER.debug(f'Getting conclusion for {analysis.name}: {self.name}')
