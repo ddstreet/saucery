@@ -1,8 +1,4 @@
 
-import bz2
-import gzip
-import lzma
-
 from abc import abstractmethod
 from collections import ChainMap
 from functools import cached_property

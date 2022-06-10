@@ -1,9 +1,5 @@
 
 import logging
-import magic
-import os
-import re
-import shutil
 import subprocess
 
 from collections.abc import Mapping

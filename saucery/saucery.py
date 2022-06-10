@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-import tempfile
 
 from collections import ChainMap
 from functools import cached_property
