@@ -80,10 +80,6 @@ class SOS(SauceryBase):
         return self.sosreport.parent / self.name
 
     @property
-    def linesdir(self):
-        return self.workdir / 'lines'
-
-    @property
     def filesdir(self):
         return self.workdir / 'files'
 

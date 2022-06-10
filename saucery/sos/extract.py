@@ -1,5 +1,7 @@
 
 import logging
+import magic
+import re
 import shutil
 import subprocess
 import tarfile
@@ -248,13 +250,35 @@ class SOSExtractionMember(dict):
         if toffset != moffset:
             LOGGER.warning(f'tar offset {toffset} != member data offset {moffset}')
             tar.fileobj.seek(moffset)
-        self.full_path.write_bytes(tar.fileobj.read(self.member.size))
+        content = tar.fileobj.read(self.member.size)
+        self.full_path.write_bytes(content)
         self.full_path.chmod(self.full_path.stat().st_mode | 0o644)
+        if magic.from_buffer(content, mime=True).startswith('text'):
+            self.newlines_path.parent.mkdir(exist_ok=True)
+            self.newlines_path.write_text(','.join(map(str, self.newline_iter(content))))
         return True
+
+    @property
+    def newlines_path(self):
+        return self.full_path.parent / '.SAUCERY_NEWLINES' / self.full_path.name
+
+    def newline_iter(self, content):
+        yield 0
+        last = -1
+        for newline in re.finditer(b'\n', content):
+            last = newline.end()
+        if last != len(content):
+            yield len(content)
 
     def extract_link(self):
         self.full_path.symlink_to(self.member.linkname)
+        self.newlines_path.parent.mkdir(exist_ok=True)
+        self.newlines_path.symlink_to(self.newlines_symlink_target(self.member.linkname))
         return True
+
+    def newlines_symlink_target(self, target):
+        path = Path(target)
+        return Path('..', *path.parent.parts, '.SAUCERY_NEWLINES', path.name)
 
     def extract(self, tar):
         if self.type == 'dir':

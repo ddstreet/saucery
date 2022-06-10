@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 
+from collections.abc import Mapping
 from contextlib import suppress
 from functools import cached_property
 
@@ -32,8 +33,6 @@ class SOSAnalysis(object):
         for the sosreport, and only performs external analysis if external_analysis_keys
         is configured with key names.
         '''
-        LOGGER.debug(f'Detecting newlines: {self.name}')
-        self.detect_newlines()
         LOGGER.debug(f'Gathering conclusions: {self.name}')
         self.conclusions
         if not self.sos.case:
@@ -56,33 +55,6 @@ class SOSAnalysis(object):
     @cached_property
     def conclusions(self):
         return [c for c in map(self._get_conclusion, self.sos.reductions.analyses) if c]
-
-    def detect_newlines(self):
-        if self.sos.linesdir.exists() and not self.sos.dry_run:
-            shutil.rmtree(self.sos.linesdir)
-
-        for f in self.sos.files_json:
-            if f.get('type') == 'file':
-                self.create_newline_file(f.get('path'))
-            elif f.get('type') == 'link':
-                self.create_newline_symlink(f.get('path'))
-
-    def create_newline_symlink(self, f):
-        path = self.sos.file(f)
-        lines_path = self.sos.linesdir / f
-        lines_path.parent.mkdir(parents=True, exist_ok=True)
-        lines_path.symlink_to(os.readlink(str(path)))
-
-    def create_newline_file(self, f):
-        path = self.sos.file(f)
-        if not magic.from_file(str(path), mime=True).startswith('text'):
-            return
-        lines_path = self.sos.linesdir / f
-        lines_path.parent.mkdir(parents=True, exist_ok=True)
-        lines_path.write_text(','.join(map(str, self.newline_iter(path))))
-
-    def newline_iter(self, path):
-        return (newline.end() for newline in re.finditer(b'^|\n|(?<!\n)$', path.read_bytes()))
 
     @cached_property
     def case(self):
@@ -132,10 +104,10 @@ class SOSAnalysis(object):
         if not cmd:
             LOGGER.debug(f"No config for '{key}', skipping: {self.name}")
             return None
-        cmd = [c.format_map(vars(self.sos)) for c in cmd.split()]
+        cmd = [c.format_map(SOSMapping(self.sos)) for c in cmd.split()]
         cmdstr = ' '.join(cmd)
 
-        LOGGER.debug(f"Lookup for '{key}': {cmdstr}")
+        LOGGER.debug(f"Running '{key}' command: {cmdstr}")
         try:
             result = subprocess.run(cmd, encoding='utf-8',
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -149,5 +121,21 @@ class SOSAnalysis(object):
                 LOGGER.error(result.stderr)
             return None
 
-        LOGGER.debug(f"Looked up '{key}': {self.name}")
+        LOGGER.debug(f"Finished command for '{key}': {self.name}")
         return result.stdout
+
+
+class SOSMapping(Mapping):
+    def __init__(self, sos):
+        self.sos = sos
+
+    def __getitem__(self, key):
+        with suppress(AttributeError):
+            return getattr(self.sos, key)
+        raise KeyError(key)
+
+    def __iter__(self):
+        return (a for a in dir(self.sos) if not a.startswith('_'))
+
+    def __len__(self):
+        return len(list(self))

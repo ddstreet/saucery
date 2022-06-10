@@ -31,7 +31,7 @@ function TextFile() {
         return;
 
     let table = $('<table>').append($('<tbody>'));
-    let newlines = ['', SauceryService, SauceryServiceValue, 'lines', SaucerySubServicePath].join('/');
+    let newlines = SauceryPath.slice(0, -1).concat('.SAUCERY_NEWLINES', SauceryPath.at(-1)).join('/');
 
     let startline = 1;
     let endline = 120;
@@ -41,6 +41,9 @@ function TextFile() {
     }
 
     $.ajax(newlines, {
+        data: {
+            format: 'raw',
+        },
         success: (data => {
             SauceryLineOffsets = data.split(',');
             SauceryLastLineNumber = SauceryLineOffsets.length - 1;
