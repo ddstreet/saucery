@@ -1,17 +1,20 @@
 
 var SauceryParams = new URLSearchParams(window.location.search);
-var SauceryPath = window.location.pathname.split('/');
+var SauceryPath = window.location.pathname;
+var SauceryPathEntries = SauceryPath.split('/');
 
 // service name, e.g. 'sos', 'case', 'customer', 'machineid', 'hostname', etc...
-var SauceryService = SauceryPath[1];
+var SauceryService = SauceryPathEntries[1];
 // service value, e.g. sosreport name for 'sos', case number for 'case', etc...
-var SauceryServiceValue = SauceryPath[2];
+var SauceryServiceValue = SauceryPathEntries[2];
 // service path, i.e. any path after key; used mostly for 'sos', e.g. /files/...
-var SauceryServicePath = SauceryPath.slice(3).join('/');
+var SauceryServicePathEntries = SauceryPathEntries.slice(3).filter(p => p);
+var SauceryServicePath = SauceryServicePathEntries.join('/');
 // service sub-value, e.g. 'files' for sos-*/files/
-var SaucerySubServiceValue = SauceryPath[3];
+var SaucerySubServiceValue = SauceryServicePathEntries[0];
 // service sub-path, e.g. path after key/files/
-var SaucerySubServicePath = SauceryPath.slice(4).join('/');
+var SaucerySubServicePathEntries = SauceryServicePathEntries.slice(1);
+var SaucerySubServicePath = SaucerySubServicePathEntries.join('/');
 
 var SauceryMenu = [];
 var SauceryMenuLoaded = $.getJSON('/menu.json', data => SauceryMenu = data);

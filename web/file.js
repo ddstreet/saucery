@@ -31,7 +31,8 @@ function TextFile() {
         return;
 
     let table = $('<table>').append($('<tbody>'));
-    let newlines = SauceryPath.slice(0, -1).concat('.SAUCERY_NEWLINES', SauceryPath.at(-1)).join('/');
+    let newlines = SauceryPathEntries.slice(0, -1)
+        .concat('.SAUCERY_NEWLINES', SauceryPathEntries.at(-1)).join('/');
 
     let startline = 1;
     let endline = 120;

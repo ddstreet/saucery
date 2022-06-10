@@ -15,11 +15,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" />
 
     <script src="/saucery.js"></script>
-    <script src="/tree.js"></script>
+    <script src="/dirtree.js"></script>
+    <script src="/jsontree.js"></script>
     <link rel="stylesheet" type="text/css" href="/saucery.css"/>
 
     <script type='text/javascript'>
       SelectSOSEntries({'field': 'name'});
+
+      $(function () {
+          let json = '../'.repeat(SauceryServicePathEntries.filter(p => p).length) + 'conclusions';
+          $('div.JsonTree').attr('saucery-tree-json', json);
+          JsonTree();
+          DirTree();
+      });
     </script>
   </head>
 
@@ -29,11 +37,11 @@
     <div class='case'>Case: </div>
     <div class='customer'>Customer: </div>
     <hr>
-    <div class='ConclusionsTree'></div>
+    <div class='JsonTree' saucery-tree-name='Analysis' saucery-tree-json='conclusions'></div>
     <hr>
-    <div class='Tree' saucery-tree-name='External Analysis' saucery-tree-href='external_analysis'></div>
+    <div class='DirTree' saucery-tree-name='External Analysis' saucery-tree-href='external_analysis'></div>
     <hr>
-    <div class='Tree' saucery-tree-name='Files' saucery-tree-href='files'></div>
+    <div class='DirTree' saucery-tree-name='Files' saucery-tree-href='files'></div>
   </body>
 
 </html>

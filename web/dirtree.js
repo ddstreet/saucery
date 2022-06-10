@@ -1,29 +1,22 @@
 
-$(Tree);
-
-function Tree() {
-    let trees = $('.Tree')
+function DirTree() {
+    let trees = $('.DirTree')
     if (!trees.length)
         return;
 
-    let sospath = SauceryServicePath.split('/').filter(p => p).reverse();
-    let treename = sospath.at(0);
-    sospath = sospath.slice(1);
+    let pathentries = SauceryServicePathEntries.filter(p => p);
 
     trees.each(function () {
         let t = $(this);
         let name = t.attr('saucery-tree-name');
         let href = t.attr('saucery-tree-href');
+        let div = $('<div>').addClass('anchors').appendTo(t);
+        let up = '../'.repeat(pathentries.length);
 
-        if (treename) {
-            if (treename == href)
-                href = '.';
-            else
-                href = '../' + href;
-        }
-        $('<a>').text(name).attr('href', href).appendTo(t);
+        $('<a>').text(name).attr('href', up + href).appendTo(div);
     });
 
+    let treename = pathentries.at(0);
     if (!treename)
         return;
 
@@ -32,12 +25,13 @@ function Tree() {
         return;
 
     let href = '';
-    let anchors = sospath.flatMap(function (name) {
-        let a = $('<a>').attr('href', href).text(name);
-        href = href + '../';
-        return [a, $('<a>').text('/')];
-    }).slice(0, -1).reverse();
-    $('<div>').append(anchors).appendTo(tree);
+    let anchors = pathentries.slice(1).reverse()
+        .flatMap(function (name) {
+            let a = $('<a>').attr('href', href).text(name);
+            href = href + '../';
+            return [a, $('<a>').text('/')];
+        }).reverse();
+    tree.children('div.anchors').append(anchors);
 
     let jstree_data = function (obj, callback) {
         let path = this.get_path(obj, '/') || '';
