@@ -36,7 +36,7 @@ class SOSSquash(object):
         src = self.sos.squashimg
         dest = self.sos.filesdir
         dest.mkdir(exist_ok=True)
-        cmd = ['squashfuse', str(src), str(dest)]
+        cmd = ['squashfuse', '-o', 'allow_other', str(src), str(dest)]
         result = subprocess.run(cmd, encoding='utf-8',
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.stdout.strip():
