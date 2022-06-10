@@ -12,6 +12,7 @@ import sys
 from datetime import datetime
 from datetime import timezone
 from functools import cached_property
+from functools import lru_cache
 from functools import partialmethod
 from io import StringIO
 from pathlib import Path
@@ -52,9 +53,22 @@ class SaucerySFTPDownloader(object):
         for pattern in self.regex:
             LOGGER.debug(f"Checking pattern '{pattern}'")
             downloads.extend(self._find_downloads(Path(pattern).parts))
-        total = len(downloads)
+        downloads = list(filter(self._filter_downloads, downloads))
+        total_downloads = len(downloads)
+        total_bytes = sum([self._path_stat(d).st_size for d in downloads])
+        (size, suffix) = self.scale_bytes(total_bytes)
+        LOGGER.info(f'Found {total_downloads} sosreports to download ({size}{suffix})')
+        count = 0
         for index, path in enumerate(downloads):
-            self._download(path, index, total)
+            self._download(path, index, total_downloads, count, total_bytes)
+            count += self._path_stat(path).st_size
+
+    def scale_bytes(self, size):
+        for (power, suffix) in enumerate(['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']):
+            div = pow(1024, power)
+            if size < pow(1024, power+1):
+                return (size//pow(1024, power), suffix)
+        raise ValueError(f'size too large: {size}')
 
     @property
     def verbose(self):
@@ -233,30 +247,49 @@ class SaucerySFTPDownloader(object):
             LOGGER.info(f'Adding file {newpath}')
             yield newpath
 
-    def _download(self, path, index, total):
+    @lru_cache(1000)
+    def _path_stat(self, path):
+        return self.sftp.stat(str(path))
+
+    def _filter_downloads(self, path):
         try:
             sos = self.saucery.sosreport(path.name)
         except ValueError:
             LOGGER.error(f"Skipping sosreport with invalid name: '{path.name}'")
-            return None
+            return False
         if sos.exists():
             LOGGER.debug(f"Skipping already downloaded sosreport: '{path.name}'")
-            return None
-        stat = self.sftp.stat(str(path))
+            return False
+        stat = self._path_stat(path)
         age = datetime.now() - datetime.fromtimestamp(stat.st_mtime)
         if age > self.max_age:
             LOGGER.debug(f"Skipping sosreport with age '{age}': '{path.name}'")
-            return None
+            return False
+        return True
+
+    def _download(self, path, index, total_downloads, count, total_bytes):
+        sos = self.saucery.sosreport(path.name)
         LOGGER.debug(f"Downloading '{path}' to '{sos}'")
         if self.dry_run:
-            return None
+            return
         name = (path.name[:39] + '\u2026') if len(path.name) > 40 else path.name
-        suffix = f'%(percent)d%% (%(index)d/%(max)d) [file {index+1}/{total}]'
-        with Bar(name, suffix=suffix, max=stat.st_size) as bar:
+        sosreport_size = self._path_stat(path).st_size
+        (adjmax, adjmaxsuffix) = self.scale_bytes(sosreport_size)
+        (adjtotalbytes, adjtotalbytessuffix) = self.scale_bytes(total_bytes)
+        with Bar(name, max=sosreport_size) as bar:
+            bar.suffix = (f'%(percent)d%% (%(adjindex)d%(adjindexsuffix)s/{adjmax}{adjmaxsuffix}) '
+                          f'[{index+1}/{total_downloads}] '
+                          f'(%(adjbytes)d%(adjbytessuffix)s/{adjtotalbytes}{adjtotalbytessuffix})')
+            bar.adjindex = 0
+            bar.adjindexsuffix = ''
+            bar.adjbytes = 0
+            bar.adjbytessuffix = ''
             last = [0]
             def callback(n, l):
                 bar.next(n - l[0])
                 l[0] = n
+                (bar.adjindex, bar.adjindexsuffix) = self.scale_bytes(n)
+                (bar.adjbytes, bar.adjbytessuffix) = self.scale_bytes(count + n)
             with sos.sosreport.open('wb') as dest:
                 self.sftp.getfo(str(path), dest, callback=lambda n, _: callback(n, last))
         self._get_case(sos, path)
