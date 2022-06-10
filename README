@@ -1,4 +1,11 @@
 
+For python requirements, see the requirements.txt and test-requirements.txt files.
+You will also need to install:
+- mksquashfs
+- squashfuse
+- nginx
+- jq
+
 For basic local development setup:
 
 1) mkdir -p ~/saucery/sos
@@ -21,6 +28,7 @@ To set up the web UI:
   b) create a symlink at /saucery to your ~/saucery dir
 5) symlink, or copy, the git checkout 'web' dir to ~/saucery/web
 6) restart nginx
+7) edit the /etc/fuse.conf file, to uncomment the option 'user_allow_other'
 
 You should now be able to point a web browser at your system and view the Saucery contents.
 
