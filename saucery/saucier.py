@@ -70,7 +70,8 @@ class Saucier(SauceryBase):
                 if e:
                     sos = submissions.get(future)
                     LOGGER.error(f'Error processing {sos}: {e}')
-                    LOGGER.exception(e)
+                    if LOGGER.isEnabledFor(logging.DEBUG):
+                        LOGGER.exception(e)
         LOGGER.info(f'Finished processing {len(sosreports)} sosreports')
 
     def _process(self, sosreport, *,
