@@ -522,7 +522,7 @@ class ForeachAnalysis(Analysis):
     def _results(self):
         if self.analyses is None:
             return None
-        return chain(*[a.results for a in self.analyses])
+        return list(chain(*[a.results for a in self.analyses]))
 
     @property
     def _normal(self):
@@ -549,7 +549,7 @@ class LogicalAnalysis(Analysis):
     def _results(self):
         if not self.analyses:
             return None
-        return chain(*[a.results for a in self.analyses])
+        return list(chain(*[a.results for a in self.analyses]))
 
     @property
     def _normal(self):

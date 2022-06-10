@@ -31,11 +31,11 @@ class Reductions(UserDict):
 
     @property
     def analyses(self):
-        return self._analyses.values()
+        return list(self._analyses.values())
 
     @property
     def references(self):
-        return self._references.values()
+        return list(self._references.values())
 
     def __setitem__(self, key, value):
         if not value:
