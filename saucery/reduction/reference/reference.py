@@ -83,8 +83,6 @@ class FileReference(Reference):
 
     The result of any 'glob' expansion will be sorted.
 
-    The file is transparently decompresssed if the suffix is recognized.
-
     This has additional optional keys:
       noglob: If True, globbing is disabled (default False)
     '''
@@ -98,43 +96,14 @@ class FileReference(Reference):
                         super().fields())
 
     @classmethod
-    def decompressors(cls):
-        return {
-            'bz2': bz2.decompress,
-            'gz': gzip.decompress,
-            'xz': lzma.decompress
-        }
-
-    @classmethod
-    def decompressor(cls, suffix):
-        return cls.decompressors().get(suffix.lower().lstrip('.'), lambda b: b)
-
-    @classmethod
-    def decompress(cls, path, content=None):
-        if content is None:
-            content = path.read_bytes()
-
-        try:
-            return cls.decompressor(path.suffix)(content)
-        except Exception as e:
-            print(f'Could not decompress {path}: {e}')
-
-        return None
-
-    @classmethod
-    def path_read(cls, path, decompress=True):
+    def path_read(cls, path):
         if not path or not path.is_file():
             return None
 
         try:
-            content = path.read_bytes()
+            return path.read_bytes()
         except PermissionError:
             return None
-
-        if not decompress:
-            return content
-
-        return cls.decompress(path, content)
 
     def _relative_sospath(self, path):
         return str(Path('/') / path.relative_to(self.sos.filesdir))
