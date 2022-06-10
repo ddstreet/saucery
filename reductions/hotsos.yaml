@@ -1,6 +1,6 @@
 - name: hotsos.yaml
   source: hotsos.yaml
-  type: sosmeta
+  type: external
 - name: hotsos.json
   source: hotsos.yaml
   type: yaml2json

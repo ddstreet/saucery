@@ -225,17 +225,17 @@ class CommandReference(FileReference):
         return str(Path('/sos_commands') / self.get('command'))
 
 
-class SOSMetaReference(Reference):
-    '''SOSMetaReference object.
+class ExternalReference(Reference):
+    '''ExternalReference object.
 
-    This represents a reference to a 'meta' property of the SOS instance.
+    This represents a reference to an 'external analysis' property.
 
-    This gets the value of self.sos.meta.get(source) or None.
+    This gets the value of self.sos.external.get(source) or None.
     '''
     @classmethod
     def TYPE(cls):
-        return 'sosmeta'
+        return 'external'
 
     @property
     def value(self):
-        return self.sos.meta.get(self.source)
+        return self.sos.external.get(self.source)
