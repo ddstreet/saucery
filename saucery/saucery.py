@@ -76,6 +76,6 @@ class Saucery(SauceryBase):
         if self.dry_run:
             return
 
-        entries = (s.json for s in self.sosreports if s.extracted or s.mounted)
+        entries = [s.json for s in self.sosreports if s.extracted or s.mounted]
         menu = json.dumps(entries, indent=2, sort_keys=True)
         self.menu.write_text(menu)
