@@ -1,9 +1,6 @@
-- name: hotsos.yaml
-  source: hotsos.yaml
-  type: external
 - name: hotsos.json
-  source: hotsos.yaml
-  type: yaml2json
+  source: hotsos.json
+  type: external
 - name: hotsos-potential-issues
   source: hotsos.json
   type: chain
