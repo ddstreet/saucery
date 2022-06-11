@@ -4,10 +4,15 @@ function JsonTree() {
         let t = $(this);
         let name = t.attr('saucery-tree-name');
         let json = t.attr('saucery-tree-json');
-        let ul = $('<ul>').appendTo(t);
-        let li = $('<li>').text(name).appendTo(ul);
+        let parent = t;
+        if (name) {
+            let ul = $('<ul>').appendTo(t);
+            let li = $('<li>').appendTo(ul);
+            $('<a>').text(name).appendTo(li);
+            parent = li;
+        }
 
-        $.getJSON(json, {format: 'json'}, (data => PopulateJsonTree(t, li, data)));
+        $.getJSON(json, {format: 'raw'}, (data => PopulateJsonTree(t, parent, data)));
     });
 }
 

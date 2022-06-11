@@ -15,33 +15,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" />
 
     <script src="/saucery.js"></script>
-    <script src="/dirtree.js"></script>
     <script src="/jsontree.js"></script>
     <link rel="stylesheet" type="text/css" href="/saucery.css"/>
 
     <script type='text/javascript'>
-      SelectSOSEntries({'field': 'name'});
-
       $(function () {
-          let json = '../'.repeat(SauceryServicePathEntries.filter(p => p).length) + 'conclusions';
+          let json = SauceryPathEntries.filter(p => p).at(-1);
+          $('.ExpandAll').click(_ => $('.JsonTree').jstree().open_all());
+          $('.PlainText').attr('href', json + '?format=raw');
           $('div.JsonTree').attr('saucery-tree-json', json);
           JsonTree();
-          DirTree();
       });
     </script>
   </head>
 
   <body>
-    <div class='mainindex'></div>
-    <div class='sosreport'>SOS: </div>
-    <div class='case'>Case: </div>
-    <div class='customer'>Customer: </div>
-    <hr>
-    <div class='JsonTree' saucery-tree-name='Analysis'></div>
-    <hr>
-    <div class='DirTree' saucery-tree-name='External Analysis' saucery-tree-href='external_analysis'></div>
-    <hr>
-    <div class='DirTree' saucery-tree-name='Files' saucery-tree-href='files'></div>
+    <div style='position: absolute; right: 2%'>
+      <button class='ExpandAll'>Expand All</button>
+      <a class='PlainText'>Plain Text</a>
+    </div>
+    <div class='JsonTree'></div>
   </body>
 
 </html>
