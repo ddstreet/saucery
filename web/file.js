@@ -1,12 +1,13 @@
 
 // This is an array of each line offset into the file.
-// The line numbers always start with 0, since line 1 is always at 0,
-// and each following line number is immediately after each newline,
-// and includes the EOF, meaning the final entry == file size
+// The line offsets always start with 0, since line 1 is always at 0,
+// and each following offset is immediately after each newline,
+// and includes the offset after EOF, meaning the final entry == file size,
+// and this this array's length is 1 more than the total number of lines
 var SauceryLineOffsets;
 
-var SauceryFirstLineNumber = 1;
-var SauceryLastLineNumber;
+function SauceryFirstLineNumber() { return 1; }
+function SauceryLastLineNumber() { return SauceryLineOffsets.length - 1; }
 
 // Line to scroll page to on first load, e.g. #LINE50
 function SauceryBookmarkLineNumber() {
@@ -47,9 +48,8 @@ function TextFile() {
         },
         success: (data => {
             SauceryLineOffsets = data.split(',');
-            SauceryLastLineNumber = SauceryLineOffsets.length - 1;
-            startline = Math.min(startline, SauceryLastLineNumber - 100);
-            endline = Math.max(endline, SauceryFirstLineNumber + 100);
+            startline = Math.min(startline, SauceryLastLineNumber() - 100);
+            endline = Math.max(endline, SauceryFirstLineNumber() + 100);
             LoadRange(startline, endline).done(ScrollToLineNumber);
         }),
         error: (_ => {
@@ -92,15 +92,14 @@ function AddScrollHandlers() {
 
         if (windowTop < firstLineTop + 40 && firstLineNumber > 1)
             LoadRange(firstLineNumber - 100, firstLineNumber - 1)
-        else if (windowBottom > lastLineTop - 40 && lastLineNumber < SauceryLastLineNumber)
+        else if (windowBottom > lastLineTop - 40 && lastLineNumber < SauceryLastLineNumber())
             LoadRange(lastLineNumber + 1, lastLineNumber + 100)
     });
-    $(window).keypress(event => { alert('event: ' + event.data); });
+    // TODO: hook keypress to detect 'start' or 'end' pressed
 }
 
 function LoadRange(start, end) {
-    start = Math.max(SauceryFirstLineNumber, start);
-    start = Math.min(start, SauceryLastLineNumber);
+    start = Math.min(Math.max(SauceryFirstLineNumber(), start), SauceryLastLineNumber());
     end = Math.max(start, end);
 
     // Subtract 1 to adjust 1-based startline to 0-based array index
