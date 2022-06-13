@@ -176,6 +176,8 @@ class SOSExtraction(object):
 
 
 class SOSExtractionMember(dict):
+    LINES_DIRNAME = '.SAUCERY_LINES'
+
     def __init__(self, dest, member):
         self._dest = dest
         self._member = member
@@ -208,6 +210,10 @@ class SOSExtractionMember(dict):
     def full_path(self):
         '''The full, resolved path including the dest path'''
         return self.dest.joinpath(self.member.name).resolve()
+
+    @property
+    def lines_path(self):
+        return self.full_path.parent / self.LINES_DIRNAME / self.full_path.name
 
     @property
     def name(self):
@@ -250,35 +256,35 @@ class SOSExtractionMember(dict):
         if toffset != moffset:
             LOGGER.warning(f'tar offset {toffset} != member data offset {moffset}')
             tar.fileobj.seek(moffset)
-        content = tar.fileobj.read(self.member.size)
-        self.full_path.write_bytes(content)
+
+        pos = 0
+        offsets = [0]
+        remain = self.member.size
+        with self.full_path.open('wb') as f:
+            while remain > 0:
+                blocksize = min(4 * 1024 * 1024, remain)
+                block = tar.fileobj.read(blocksize)
+                f.write(block)
+                offsets += [pos + n.end() for n in re.finditer(b'\n', block)]
+                remain -= len(block)
+                pos += len(block)
+        if offsets[-1] != self.member.size:
+            offsets.append(self.member.size)
+
         self.full_path.chmod(self.full_path.stat().st_mode | 0o644)
-        if magic.from_buffer(content, mime=True).startswith('text'):
-            self.newlines_path.parent.mkdir(exist_ok=True)
-            self.newlines_path.write_text(','.join(map(str, self.newline_iter(content))))
+        self.lines_path.parent.mkdir(exist_ok=True)
+        self.lines_path.write_text(','.join(map(str, offsets)))
         return True
-
-    @property
-    def newlines_path(self):
-        return self.full_path.parent / '.SAUCERY_NEWLINES' / self.full_path.name
-
-    def newline_iter(self, content):
-        yield 0
-        last = -1
-        for newline in re.finditer(b'\n', content):
-            last = newline.end()
-        if last != len(content):
-            yield len(content)
 
     def extract_link(self):
         self.full_path.symlink_to(self.member.linkname)
-        self.newlines_path.parent.mkdir(exist_ok=True)
-        self.newlines_path.symlink_to(self.newlines_symlink_target(self.member.linkname))
+        self.lines_path.parent.mkdir(exist_ok=True)
+        self.lines_path.symlink_to(self.lines_symlink_target(self.member.linkname))
         return True
 
-    def newlines_symlink_target(self, target):
+    def lines_symlink_target(self, target):
         path = Path(target)
-        return Path('..', *path.parent.parts, '.SAUCERY_NEWLINES', path.name)
+        return Path('..', *path.parent.parts, self.LINES_DIRNAME, path.name)
 
     def extract(self, tar):
         if self.type == 'dir':
