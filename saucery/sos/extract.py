@@ -1,6 +1,5 @@
 
 import logging
-import magic
 import re
 import shutil
 import subprocess
