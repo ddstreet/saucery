@@ -114,8 +114,16 @@ class DirDict(MutableMapping):
             raise KeyError(key)
 
     def __setitem__(self, key, value):
+        if value is None:
+            del self[key]
+            return
         self._dirpath.mkdir(exist_ok=True)
-        self.path(key).write_text(value)
+        if isinstance(value, str):
+            self.path(key).write_text(value)
+        elif isinstance(value, bytes):
+            self.path(key).write_bytes(value)
+        else:
+            raise ValueError(f"Value is not str nor bytes: '{value}'")
 
     def __delitem__(self, key):
         self.path(key).unlink(missing_ok=True)
