@@ -33,9 +33,15 @@ class Reductions(UserDict):
     def analyses(self):
         return list(self._analyses.values())
 
+    def analysis(self, name):
+        return self._analyses.get(name)
+
     @property
     def references(self):
         return list(self._references.values())
+
+    def reference(self, name):
+        return self._references.get(name)
 
     def __setitem__(self, key, value):
         if not value:
