@@ -22,9 +22,9 @@ class Definition(ABC, UserDict):
 
     The 'definition' must be a dict that contains specific keys.
     Keys common to all implementations are:
-      name: Our name (arbitrary value)
-      type: Our type (must match a subclass type)
-      source: Our source (specific value is implementation-specific)
+      name: Our name (string, arbitrary value)
+      type: Our type (string, must match a subclass type)
+      source: Our source (string by default, implementation-specific value)
     '''
     IMPLEMENTATIONS = {}
     ERROR_CLASS = InvalidDefinitionError
@@ -59,7 +59,7 @@ class Definition(ABC, UserDict):
         return {
             'name': cls._field('text'),
             'type': cls._field('text'),
-            'source': cls._field(['text', 'list', 'dict']),
+            'source': cls._field('text'),
         }
 
     def __init__(self, definition, reductions, *, anonymous=False):
@@ -94,10 +94,7 @@ class Definition(ABC, UserDict):
 
     @cached_property
     def source(self):
-        s = self.get('source')
-        if isinstance(s, dict):
-            return self.anonymous(s).name
-        return s
+        return self.get('source')
 
     @property
     def json(self):
