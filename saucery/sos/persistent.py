@@ -102,27 +102,27 @@ class JSONFileProperty(FileProperty):
 
 class DirDict(MutableMapping):
     def __init__(self, path):
-        self._path = Path(path)
+        self._dirpath = Path(path)
 
-    def _file(self, key):
-        return self._path / key
+    def path(self, key):
+        return self._dirpath / key
 
     def __getitem__(self, key):
         try:
-            return self._file(key).read_text()
+            return self.path(key).read_bytes()
         except FileNotFoundError:
             raise KeyError(key)
 
     def __setitem__(self, key, value):
-        self._path.mkdir(exist_ok=True)
-        self._file(key).write_text(value)
+        self._dirpath.mkdir(exist_ok=True)
+        self.path(key).write_text(value)
 
     def __delitem__(self, key):
-        self._file(key).unlink(missing_ok=True)
+        self.path(key).unlink(missing_ok=True)
 
     def __iter__(self):
-        if self._path.is_dir():
-            return (f.name for f in self._path.iterdir())
+        if self._dirpath.is_dir():
+            return (f.name for f in self._dirpath.iterdir())
         return iter([])
 
     def __len__(self):
