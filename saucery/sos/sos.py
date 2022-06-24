@@ -365,6 +365,10 @@ class SOS(SauceryBase):
     def external_analysis(self):
         return DirDict(self.workdir / 'external_analysis')
 
+    @cached_property
+    def analysis_files(self):
+        return DirDict(self.workdir / 'analysis_files')
+
     def analyse(self, *args, **kwargs):
         self._analyse(*args, **kwargs)
         return self.analysed
