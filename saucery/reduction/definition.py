@@ -1,4 +1,5 @@
 
+import inspect
 import json
 import uuid
 import yaml
@@ -46,7 +47,8 @@ class Definition(ABC, UserDict):
     @classmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls.IMPLEMENTATIONS[cls.TYPE()] = cls
+        if not inspect.isabstract(cls):
+            cls.IMPLEMENTATIONS[cls.TYPE()] = cls
 
     @classmethod
     def _field(cls, *args, **kwargs):
