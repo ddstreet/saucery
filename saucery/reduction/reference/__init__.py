@@ -2,9 +2,12 @@
 # We have to import all the implementation files so they
 # 'register' their type with Definition
 from .bytesreference import * # noqa
+from .chain import * # noqa
 from .dictreference import * # noqa
+from .file import * # noqa
 from .inireference import * # noqa
 from .jqreference import * # noqa
+from .reduce import * # noqa
 from .transform import * # noqa
 from .textreference import * # noqa
 

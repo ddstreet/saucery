@@ -1,18 +1,14 @@
 
 from abc import abstractmethod
 from collections import ChainMap
+from collections.abc import Sequence
+from contextlib import suppress
 from functools import cached_property
 from itertools import chain
 from pathlib import Path
 
 from ..definition import Definition
 from ..definition import InvalidDefinitionError
-
-
-__all__ = [
-    'InvalidReferenceError',
-    'Reference',
-]
 
 
 class InvalidReferenceError(InvalidDefinitionError):
@@ -22,185 +18,118 @@ class InvalidReferenceError(InvalidDefinitionError):
 class Reference(Definition):
     '''Reference object.
 
-    This represents a reference to an entry inside the SOS.
+    This represents a reference to content from the SOS.
     '''
     ERROR_CLASS = InvalidReferenceError
 
-    @classmethod
-    def _value_bytes(cls, value, **kwargs):
-        return cls._value_convert(value, False, **kwargs)
-
-    @classmethod
-    def _value_text(cls, value, **kwargs):
-        return cls._value_convert(value, True, **kwargs)
-
-    @classmethod
-    def _value_convert(cls, value, to_text, **kwargs):
-        if value is None:
-            return None
-        if to_text and isinstance(value, str):
-            return value
-        if not to_text and isinstance(value, bytes):
-            return value
-        params = {k: v for k, v in kwargs.items() if v is not None}
-        if to_text:
-            return value.decode(**params)
-        return value.encode(**params)
-
-    @property
-    def _value_conversion_kwargs(self):
-        return {}
-
-    @property
-    def value_bytes(self):
-        return self._value_bytes(self.value, **self._value_conversion_kwargs)
-
-    @property
-    def value_text(self):
-        return self._value_text(self.value, **self._value_conversion_kwargs)
-
     @property
     @abstractmethod
+    def pathlist(self):
+        '''The source for this reference.
+
+        Returns a ReferencePathList of ReferencePath objects.
+
+        The objects cover the entire range of this reference's value.
+        '''
+        pass
+
+    @property
     def value(self):
-        '''The value.'''
+        '''The entire value of this reference.
+
+        Returns a bytes object.
+        '''
+        return self.sourcelist.value
+
+    @property
+    def size(self):
+        '''The size of this reference value.'''
+        return self.sourcelist.length
+
+
+class ReferencePath(Path):
+    def __init__(self, path, *, offset=0, length=0):
+        super.__init__(str(path))
+        self._offset = max(0, offset)
+        self._length = max(0, length)
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @cached_property
+    def length(self):
+        '''Length of our file content.
+
+        This returns our internal length, if set; otherwise this attempts to
+        detect the size of our file, and returns its size minus our offset.
+
+        If our internal length is not set and we cannot detect our file size,
+        return 0.
+
+        This should not be used to detect missing files; use the value attribute instead.
+        '''
+        if self._length:
+            return self._length
+        with suppress(OSError):
+            return max(0, self.stat().st_size - self.offset)
+        return 0
+
+    @cached_property
+    def value(self):
+        '''Value of this reference source in bytes.
+
+        Returns bytes from our file, starting at our offset and continuing
+        until our specified length or the end of the file.
+
+        On error, return None.
+        '''
+        with suppress(OSError):
+            with self.open(mode='rb', buffering=0) as f:
+                f.seek(self.offset)
+                return f.read(self.length)
         return None
 
 
-class FileReference(Reference):
-    '''FileReference object.
+class ReferencePathList(Sequence):
+    def __init__(self, sources):
+        self._sources = [s if isinstance(s, ReferencePath) else ReferencePath(s)
+                         for s in sources]
 
-    This represents a reference to file(s) inside the SOS.
+    def __getitem__(self, index):
+        return self._sources[index]
 
-    The 'source' must be either a single file path or a list of file paths.
-
-    Each 'source' file path may be a regular string path, or may use
-    python 'glob' syntax; specifically, Path.glob() syntax:
-    https://docs.python.org/3/library/pathlib.html#pathlib.Path.glob
-
-    The result of any 'glob' expansion will be sorted.
-
-    This has additional optional keys:
-      noglob: If True, globbing is disabled (default False)
-    '''
-    @classmethod
-    def TYPE(cls):
-        return 'file'
-
-    @classmethod
-    def fields(cls):
-        return ChainMap({'noglob': cls._field('boolean', default=False)},
-                        super().fields())
-
-    @classmethod
-    def path_read(cls, path):
-        if not path or not path.is_file():
-            return None
-
-        try:
-            return path.read_bytes()
-        except PermissionError:
-            return None
-
-    def _relative_sospath(self, path):
-        return str(Path('/') / path.relative_to(self.sos.filesdir))
+    def __len__(self):
+        return len(self._sources)
 
     @property
-    def _subdir(self):
-        return ''
-
-    @cached_property
-    def basepath(self):
-        return self.sos.filesdir / self._source(self._subdir)
-
-    def _source(self, source):
-        return str(source).lstrip('/')
-
-    @property
-    def sources(self):
-        sources = self.source
-        if isinstance(sources, str):
-            return [sources]
-        return sources
-
-    def _expand_glob(self, path):
-        if self.get('noglob'):
-            return [self.basepath / path]
-        return self.basepath.glob(path)
-
-    @cached_property
-    def paths(self):
-        return chain(*(sorted(self._expand_glob(s))
-                       for s in map(self._source, self.sources)))
-
-    @cached_property
-    def value(self):
-        content = [c for c in [self.path_read(p) for p in self.paths] if c is not None]
-        if not content:
-            return None
-        return b''.join(content)
-
-
-class SubdirFileReference(FileReference):
-    '''SubdirFileReference object.
-
-    This represents a reference to file(s) under a subdir in the sosreport.
-
-    The only difference from FileReference is the 'source' path(s) are
-    resolved under 'subdir' inside the sosreport.
-
-    This implementation has additional required keys:
-      subdir: The subdirectory to use
-    '''
-    @classmethod
-    def TYPE(cls):
-        return 'subdirfile'
-
-    @classmethod
-    def fields(cls):
-        return ChainMap({'subdir': cls._field('text')},
-                        super().fields())
-
-    @property
-    def _subdir(self):
-        return self.get('subdir')
-
-
-class CommandReference(FileReference):
-    '''CommandReference object.
-
-    This represents a reference to a sos_commands file(s) inside the SOS.
-
-    This is identical to SubdirFileReference, except this class uses
-    'command' parameter which expands to a subdir of sos_commands/'command'/.
-
-    This implementation has additional required keys:
-      command: The 'sos_commands' subdir command
-    '''
-    @classmethod
-    def TYPE(cls):
-        return 'command'
-
-    @classmethod
-    def fields(cls):
-        return ChainMap({'command': cls._field('text')},
-                        super().fields())
-
-    @property
-    def _subdir(self):
-        return str(Path('/sos_commands') / self.get('command'))
-
-
-class ExternalReference(Reference):
-    '''ExternalReference object.
-
-    This represents a reference to an 'external analysis' property.
-
-    This gets the value of self.sos.external.get(source) or None.
-    '''
-    @classmethod
-    def TYPE(cls):
-        return 'external'
+    def length(self):
+        return sum([s.length for s in self])
 
     @property
     def value(self):
-        return self.sos.external.get(self.source)
+        '''The concatenated value of all ReferencePath objects.
+
+        If all our objects have None value, return None.
+        Otherwise, return the concatenated value of all our objects' value as bytes.
+        '''
+        sources = [s for s in self if s.value is not None]
+        if not sources:
+            return None
+        return b''.join([s.value for s in sources])
+
+    def _range(self, start, length):
+        length = length or sys.maxsize
+        for source in self:
+            if source.length <= start:
+                start -= source.length
+                continue
+            offset = source.offset + start
+            start = 0
+            yield ReferencePath(source, offset=offset, length=min(length, source.length))
+            length -= source.length
+            if length <= 0:
+                return
+
+    def range(self, start, length=0):
+        return ReferencePathList(list(self._range(start, length)))
