@@ -83,15 +83,41 @@ class SOS(SauceryBase):
     def filesdir(self):
         return self.workdir / 'files'
 
+    def under_filesdir(self, path):
+        return str(Path(path).resolve()).startswith(str(self.filesdir.resolve()))
+
+    def commanddir(self, command):
+        if '/' in str(command):
+            LOGGER.error(f"Invalid command '{command}'")
+            return None
+        d = self.filesdir / 'sos_commands' / command
+        if not self.under_filesdir(d):
+            LOGGER.error(f"Invalid command '{command}'")
+            return None
+        return d
+
+    def fileglob(self, fileglob, *, command=None):
+        d = self.commanddir(command) if command else self.filesdir
+        if not d:
+            return None
+        return [p for p in d.glob(str(fileglob).lstrip('/'))
+                if self.under_filesdir(p)]
+
     def file(self, filename, *, command=None):
-        d = self.filesdir
-        if command:
-            d = d / 'sos_commands' / command
-        return d / filename
+        d = self.commanddir(command) if command else self.filesdir
+        if not d:
+            return None
+        path = d / str(filename).lstrip('/')
+        if not self.under_filesdir(path):
+            LOGGER.error(f"Invalid filename '{filename}'")
+            return None
+        return path
 
     def _file_read(self, filename, func, *, command=None, strip=False):
         try:
             f = self.file(filename, command=command)
+            if not f:
+                return None
             content = getattr(f, func)()
         except FileNotFoundError:
             return None
