@@ -81,8 +81,12 @@ class Definition(ABC, UserDict):
         self.setup()
 
     @property
+    def reductions(self):
+        return self._reductions
+
+    @property
     def sos(self):
-        return self._reductions.sos
+        return self.reductions.sos
 
     @property
     def name(self):
@@ -105,7 +109,7 @@ class Definition(ABC, UserDict):
         return yaml.dump(self.data)
 
     def anonymous(self, definition, *args, **kwargs):
-        return Definition(definition, self._reductions, anonymous=True, *args, **kwargs)
+        return Definition(definition, self.reductions, anonymous=True, *args, **kwargs)
 
     def __repr__(self):
         return self.json
