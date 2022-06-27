@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ..definition import Definition
 from ..definition import InvalidDefinitionError
+from ...sos.lines import PathLineOffsets
 
 
 class InvalidReferenceError(InvalidDefinitionError):
@@ -74,6 +75,27 @@ class ReferencePath(Path):
         with suppress(OSError):
             return max(0, self.stat().st_size - self.offset)
         return 0
+
+    def range(self, start, length=0):
+        return ReferencePath(self, offset=start, length=length)
+
+    @cached_property
+    def line_range(self):
+        '''Line number(s) corresponding to our offset/length.
+
+        This behaves exactly as PathLineOffsets.line_range(), using our offset and length.
+        '''
+        return PathLineOffsets(self).line_range(self.offset, self.length)
+
+    @property
+    def first_line(self):
+        '''The line number containing the start of our range.'''
+        return self.line_range[0]
+
+    @property
+    def last_line(self):
+        '''The line number containing the end of our range.'''
+        return self.line_range[1]
 
     @cached_property
     def value(self):
