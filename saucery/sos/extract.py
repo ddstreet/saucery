@@ -8,7 +8,10 @@ import tempfile
 
 from contextlib import suppress
 from functools import cached_property
+from functools import partial
 from pathlib import Path
+
+from .lines import PathLineOffsets
 
 
 LOGGER = logging.getLogger(__name__)
@@ -175,8 +178,6 @@ class SOSExtraction(object):
 
 
 class SOSExtractionMember(dict):
-    LINES_DIRNAME = '.SAUCERY_LINES'
-
     def __init__(self, dest, member):
         self._dest = dest
         self._member = member
@@ -210,9 +211,9 @@ class SOSExtractionMember(dict):
         '''The full, resolved path including the dest path'''
         return self.dest.joinpath(self.member.name).resolve()
 
-    @property
+    @cached_property
     def lines_path(self):
-        return self.full_path.parent / self.LINES_DIRNAME / self.full_path.name
+        return PathLineOffsets(self.full_path)
 
     @property
     def name(self):
@@ -256,19 +257,16 @@ class SOSExtractionMember(dict):
             LOGGER.warning(f'tar offset {toffset} != member data offset {moffset}')
             tar.fileobj.seek(moffset)
 
-        pos = 0
         offsets = [0]
-        remain = self.member.size
+        pos = 0
         with self.full_path.open('wb') as f:
-            while remain > 0:
-                blocksize = min(4 * 1024 * 1024, remain)
-                block = tar.fileobj.read(blocksize)
+            for block in iter(partial(tar.fileobj.read,
+                                      min(self.BLOCKSIZE, self.member.size - pos), b'')):
                 f.write(block)
                 offsets += [pos + n.end() for n in re.finditer(b'\n', block)]
-                remain -= len(block)
                 pos += len(block)
-        if offsets[-1] != self.member.size:
-            offsets.append(self.member.size)
+        if offsets[-1] != pos:
+            offsets.append(pos)
 
         self.full_path.chmod(self.full_path.stat().st_mode | 0o644)
         self.lines_path.parent.mkdir(exist_ok=True)
@@ -278,12 +276,8 @@ class SOSExtractionMember(dict):
     def extract_link(self):
         self.full_path.symlink_to(self.member.linkname)
         self.lines_path.parent.mkdir(exist_ok=True)
-        self.lines_path.symlink_to(self.lines_symlink_target(self.member.linkname))
+        self.lines_path.symlink_to(Path('..') / PathLineOffsets(self.member.linkname))
         return True
-
-    def lines_symlink_target(self, target):
-        path = Path(target)
-        return Path('..', *path.parent.parts, self.LINES_DIRNAME, path.name)
 
     def extract(self, tar):
         if self.type == 'dir':
