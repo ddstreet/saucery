@@ -26,7 +26,8 @@ class Definition(ABC, UserDict):
       type: Our type (string, must match a subclass type)
       source: Our source (string by default, implementation-specific value)
     '''
-    IMPLEMENTATIONS = {}
+    ABSTRACT_SUBCLASSES = {}
+    SUBCLASSES = {}
     ERROR_CLASS = InvalidDefinitionError
 
     @classmethod
@@ -39,16 +40,21 @@ class Definition(ABC, UserDict):
         classtype = definition.get('type')
         if not classtype:
             raise InvalidDefinitionError(f"invalid definition, missing 'type': {definition}")
-        subclass = cls.IMPLEMENTATIONS.get(classtype)
+        subclass = cls.SUBCLASSES.get(classtype)
         if not subclass:
-            raise InvalidDefinitionError(f"Invalid definition, unknown 'type': {classtype}")
+            abstract_subclass = cls.ABSTRACT_SUBCLASSES.get(classtype)
+            if abstract_subclass:
+                raise InvalidDefinitionError(f"Invalid definition, type '{classtype}' is abstract")
+            raise InvalidDefinitionError(f"Invalid definition, type '{classtype}' is unknown")
         return super().__new__(subclass)
 
     @classmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not inspect.isabstract(cls):
-            cls.IMPLEMENTATIONS[cls.TYPE()] = cls
+            cls.SUBCLASSES[cls.TYPE()] = cls
+        elif cls.TYPE():
+            cls.ABSTRACT_SUBCLASSES[cls.TYPE()] = cls
 
     @classmethod
     def _field(cls, *args, **kwargs):
