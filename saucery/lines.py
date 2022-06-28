@@ -19,16 +19,17 @@ class PathLineOffsets(type(Path())):
     DIRNAME = '.SAUCERY_LINES'
     BLOCKSIZE = 4 * 1024 * 1024
 
-    @classmethod
-    def _from_parts(cls, args, **kwargs):
-        '''The Path module is VERY bad at allowing subclasses; this hackery is required to simply
-        subclass Path, and modify the parameter passed to the constructor.
+    @staticmethod
+    def __new__(cls, *args, **kwargs):
+        '''The Path class doesn't handle __init__() correctly, so we need this hackery.
+
+        https://github.com/python/cpython/issues/68320
         '''
         src = Path(*args)
         path = src.parent / cls.DIRNAME / src.name
-        instance = super()._from_parts(path.parts, **kwargs)
-        instance._source = src
-        return instance
+        self = super().__new__(cls, path, **kwargs)
+        self._source = src
+        return self
 
     @property
     def source(self):

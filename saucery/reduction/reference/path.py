@@ -13,11 +13,17 @@ from ...lines import PathLineOffsets
 LOGGER = logging.getLogger(__name__)
 
 
-class ReferencePath(Path):
-    def __init__(self, path, *, offset=0, length=0):
-        super.__init__(str(path))
+class ReferencePath(type(Path())):
+    @staticmethod
+    def __new__(cls, *args, offset=0, length=0, **kwargs):
+        '''The Path class doesn't handle __init__() correctly, so we need this hackery.
+
+        https://github.com/python/cpython/issues/68320
+        '''
+        self = super().__new__(cls, *args, **kwargs)
         self._offset = max(0, offset)
         self._length = max(0, length)
+        return self
 
     @property
     def offset(self):
