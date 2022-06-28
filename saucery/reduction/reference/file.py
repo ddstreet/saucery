@@ -1,6 +1,7 @@
 
 from collections import ChainMap
 from itertools import chain
+from functools import cached_property
 from pathlib import Path
 
 from .path import ReferencePathList
@@ -109,3 +110,19 @@ class CommandReference(FileReference):
     def fileglob(self, path):
         return sorted(self.sos.fileglob(self._convert_source(source),
                                         command=self.get('command')) or [])
+
+
+class AnalysisFileReference(Reference):
+    '''AnalysisFileReference object.
+
+    This represents a reference to a file under analysis_files/.
+
+    The 'source' must be a single filename; this does not allow use of globs.
+    '''
+    @classmethod
+    def TYPE(cls):
+        return 'analysis_file'
+
+    @cached_property
+    def pathlist(self):
+        return ReferencePathList([self.sos.analysis_file(self.source)])
