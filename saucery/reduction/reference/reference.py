@@ -33,9 +33,9 @@ class Reference(Definition):
 
         Returns a bytes object.
         '''
-        return self.sourcelist.value
+        return self.pathlist.value
 
     @property
     def size(self):
         '''The size of this reference value.'''
-        return self.sourcelist.length
+        return self.pathlist.length
