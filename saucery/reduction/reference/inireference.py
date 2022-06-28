@@ -3,11 +3,10 @@ from collections import ChainMap
 from configparser import ConfigParser
 from functools import cached_property
 
-from .dictreference import DictReference
-from .reference import FileReference
+from .reference import Reference
 
 
-class IniReference(DictReference, FileReference):
+class IniReference(Reference):
     @classmethod
     def TYPE(cls):
         return 'ini'
@@ -21,21 +20,3 @@ class IniReference(DictReference, FileReference):
     @cached_property
     def dict(self):
         return dict(self.parser.items())
-
-
-class IniSectionReference(IniReference):
-    @classmethod
-    def TYPE(cls):
-        return 'inisection'
-
-    @classmethod
-    def fields(cls):
-        return ChainMap({'section': cls._field('text')},
-                        super().fields())
-
-    @cached_property
-    def dict(self):
-        section = super().dict.get(self.get('section'))
-        if not section:
-            return None
-        return dict(section)
