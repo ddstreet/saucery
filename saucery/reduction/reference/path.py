@@ -53,14 +53,8 @@ class ReferencePath(type(Path())):
             return self._ref._path_line_offsets
         return PathLineOffsets(self)
 
-    @property
-    def line_number_range(self):
-        '''Line number(s) corresponding to our offset/length.
-
-        Note the line numbers correspond to our entire file, not only our subsection.
-
-        This behaves exactly as PathLineOffsets.line_range(), using our offset and length.
-        '''
+    @cached_property
+    def _line_number_range(self):
         return self._path_line_offsets.line_range(self.offset, self.length)
 
     @property
@@ -69,7 +63,7 @@ class ReferencePath(type(Path())):
 
         Note this may be greater than 1, if our offset is non-zero.
         '''
-        return self.line_number_range[0]
+        return self._line_number_range[0]
 
     @property
     def last_line_number(self):
@@ -77,7 +71,26 @@ class ReferencePath(type(Path())):
 
         Note this may be less than our file's last line number.
         '''
-        return self.line_number_range[1]
+        return self._line_number_range[1]
+
+    @property
+    def line_iterator(self):
+        '''Iterate over our value, line-by-line.
+
+        This returns an iterable of ReferencePath objects, which each represent a line from our value.
+        '''
+        offsets = self._path_line_offsets.line_offsets
+        if offsets is None:
+            return
+
+        offsets = [o - self.offset for o in offsets if o > self.offset]
+        if not offsets:
+            return
+
+        pos = 0
+        for o in offsets:
+            yield ReferencePath(self, offset=pos, length=o - pos)
+            pos = o
 
     @cached_property
     def _value(self):
