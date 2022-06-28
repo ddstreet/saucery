@@ -55,7 +55,7 @@ class FileReference(Reference):
     def file(self, source):
         return self.sos.file(self._convert_source(source))
 
-    def fileglob(self, path):
+    def fileglob(self, source):
         return sorted(self.sos.fileglob(self._convert_source(source)) or [])
 
 
@@ -107,7 +107,7 @@ class CommandReference(FileReference):
         return self.sos.file(self._convert_source(source),
                              command=self.get('command'))
 
-    def fileglob(self, path):
+    def fileglob(self, source):
         return sorted(self.sos.fileglob(self._convert_source(source),
                                         command=self.get('command')) or [])
 

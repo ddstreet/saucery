@@ -1,5 +1,6 @@
 
-from collections.abc import abstractmethod
+from abc import abstractmethod
+from functools import cached_property
 
 from .reference import Reference
 

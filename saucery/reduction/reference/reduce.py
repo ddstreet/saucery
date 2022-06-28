@@ -1,6 +1,4 @@
 
-from collections import ChainMap
-
 from .reference import Reference
 
 
