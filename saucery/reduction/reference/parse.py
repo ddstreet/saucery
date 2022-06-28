@@ -24,15 +24,24 @@ class ParseReference(Reference):
 
         This will only be called once, and the returned list cached.
 
-        The 'pathlist' parameter will never be None, however the pathlist.value may be None.
+        The 'pathlist' parameter will never be None.
+
+        If self.parse_none_value is False (the default), the pathlist.value will never be None.
         '''
         pass
+
+    @property
+    def parse_none_value(self):
+        return False
 
     @cached_property
     def pathlist(self):
         source = self.reductions.reference(self.source)
         if source is None or source.pathlist is None:
             return None
+
+        if not self.parse_none_value and source.pathlist.value is None:
+                return None
 
         return self.parse(source.pathlist)
 
@@ -53,14 +62,11 @@ class TransformReference(ParseReference):
 
         This will only be called once, and the returned value cached.
 
-        The 'value' parameter will never be None.
+        If self.parse_none_value is False (the default), the value will never be None.
         '''
         pass
 
     def parse(self, pathlist):
-        if pathlist.value is None:
-            return None
-
-        self.sos.analysis_files[self.name] = self.transform(source.pathlist.value)
+        self.sos.analysis_files[self.name] = self.transform(pathlist.value)
 
         return ReferencePathList([self.sos.analysis_files.path(self.name)])
