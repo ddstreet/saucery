@@ -132,6 +132,15 @@ class ReferencePathList(Sequence):
         return sum([s.length for s in self])
 
     @property
+    def line_iterator(self):
+        '''Iterate over our value, line-by-line.
+
+        This returns an iterable of ReferencePath objects, which each represent a line from our value.
+        '''
+        for referencepath in self:
+            yield from referencepath.line_iterator
+
+    @property
     def value(self):
         '''The concatenated value of all ReferencePath objects.
 
