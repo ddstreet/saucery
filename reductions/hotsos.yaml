@@ -1,6 +1,6 @@
 - name: hotsos.json
   source: hotsos.json
-  type: external
+  type: analysis_file
 - name: hotsos-potential-issues
   source: hotsos.json
   type: chain
