@@ -5,15 +5,3 @@
   name: sysctl_real
   source: sysctl_-a
   type: command
-- name: sysctl_config_dict
-  source: sysctl_config
-  type: indirectdict
-- name: sysctl_real_dict
-  source: sysctl_real
-  type: indirectdict
-- name: sysctl_config_check
-  ignore_fields:
-  - kernel.threads-max
-  source: sysctl_config_dict
-  to: sysctl_real_dict
-  type: indirectdicteq
