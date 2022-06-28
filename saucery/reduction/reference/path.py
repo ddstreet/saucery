@@ -21,54 +21,73 @@ class ReferencePath(type(Path())):
         https://github.com/python/cpython/issues/68320
         '''
         self = super().__new__(cls, *args, **kwargs)
+
         self._offset = max(0, offset)
         self._length = max(0, length)
+
+        self._ref = args[0] if args and isinstance(args[0], ReferencePath) else None
+
         return self
 
     @property
     def offset(self):
+        if self._ref:
+            return self._ref.offset + self._offset
         return self._offset
 
     @cached_property
     def length(self):
-        '''Length of our file content.
-
-        This returns our internal length, if set; otherwise this attempts to
-        detect the size of our file, and returns its size minus our offset.
-
-        If our internal length is not set and we cannot detect our file size,
-        return 0.
-
-        This should not be used to detect missing files; use the value attribute instead.
-        '''
-        if self._length:
-            return self._length
+        l = self._length or sys.maxsize
+        if self._ref:
+            return min(l, max(0, self._ref.length - self._offset))
         with suppress(OSError):
-            return max(0, self.stat().st_size - self.offset)
+            return min(l, max(0, self.stat().st_size - self._offset))
         return 0
 
-    def range(self, start, length=0):
-        return ReferencePath(self, offset=start, length=length)
+    def slice(self, offset, length=0):
+        return ReferencePath(self, offset=offset, length=length)
 
     @cached_property
+    def _path_line_offsets(self):
+        if self._ref:
+            return self._ref._path_line_offsets
+        return PathLineOffsets(self)
+
+    @property
     def line_number_range(self):
         '''Line number(s) corresponding to our offset/length.
 
+        Note the line numbers correspond to our entire file, not only our subsection.
+
         This behaves exactly as PathLineOffsets.line_range(), using our offset and length.
         '''
-        return PathLineOffsets(self).line_range(self.offset, self.length)
+        return self._path_line_offsets.line_range(self.offset, self.length)
 
     @property
     def first_line_number(self):
-        '''The line number containing the start of our range.'''
+        '''The line number containing the start of our range.
+
+        Note this may be greater than 1, if our offset is non-zero.
+        '''
         return self.line_number_range[0]
 
     @property
     def last_line_number(self):
-        '''The line number containing the end of our range.'''
+        '''The line number containing the end of our range.
+
+        Note this may be less than our file's last line number.
+        '''
         return self.line_number_range[1]
 
     @cached_property
+    def _value(self):
+        with suppress(OSError):
+            with self.open(mode='rb', buffering=0) as f:
+                f.seek(self.offset)
+                return f.read(self._length or None)
+        return None
+
+    @property
     def value(self):
         '''Value of this reference source in bytes.
 
@@ -77,28 +96,11 @@ class ReferencePath(type(Path())):
 
         On error, return None.
         '''
-        with suppress(OSError):
-            with self.open(mode='rb', buffering=0) as f:
-                f.seek(self.offset)
-                return f.read(self._length or None)
-        return None
-
-
-class TextReferencePath(ReferencePath):
-    @property
-    def length(self):
-        return len(self.value or '')
-
-    def range(self, offset, length=0):
-        LOGGER.warning('TextReferencePath.range() not implemented, fixme!')
-        return super().range(offset, length)
-
-    @cached_property
-    def value(self):
-        v = super().value
-        if v is None:
-            return None
-        return v.decode(errors='replace')
+        if self._ref:
+            offset = self.offset - self._ref.offset
+            end_offset = offset + self.length
+            return self._ref.value[offset:end_offset]
+        return self._value
 
 
 class ReferencePathList(Sequence):
@@ -128,18 +130,17 @@ class ReferencePathList(Sequence):
             return None
         return b''.join([s.value for s in sources])
 
-    def _range(self, start, length):
+    def _slice(self, offset, length):
         length = length or sys.maxsize
-        for source in self:
-            if source.length <= start:
-                start -= source.length
-                continue
-            offset = source.offset + start
-            start = 0
-            yield ReferencePath(source, offset=offset, length=min(length, source.length))
-            length -= source.length
+        for referencepath in self:
+            if referencepath.length <= offset:
+                offset -= referencepath.length
+            else:
+                r = ReferencePath(referencepath, offset=offset, length=length)
+                length -= r.length
+                yield r
             if length <= 0:
-                return
+                break
 
-    def range(self, start, length=0):
-        return ReferencePathList(list(self._range(start, length)))
+    def slice(self, offset, length=0):
+        return ReferencePathList(list(self._range(offset, length)))
