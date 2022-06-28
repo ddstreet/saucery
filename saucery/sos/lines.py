@@ -1,10 +1,13 @@
 
+import re
+
 from contextlib import suppress
+from functools import cached_property
 from functools import partial
 from pathlib import Path
 
 
-class PathLineOffsets(Path):
+class PathLineOffsets(type(Path())):
     '''Detect the offset of each line in a file.
 
     This always starts with offset 0 indicating the start of the first line,
@@ -17,12 +20,15 @@ class PathLineOffsets(Path):
     BLOCKSIZE = 4 * 1024 * 1024
 
     @classmethod
-    def line_offsets_path(cls, path):
-        return path.parent / cls.DIRNAME / path.name
-
-    def __init__(self, path):
-        super().__init__(self.line_offsets_path(path))
-        self._source = path
+    def _from_parts(cls, args, **kwargs):
+        '''The Path module is VERY bad at allowing subclasses; this hackery is required to simply
+        subclass Path, and modify the parameter passed to the constructor.
+        '''
+        src = Path(*args)
+        path = src.parent / cls.DIRNAME / src.name
+        instance = super()._from_parts(path.parts, **kwargs)
+        instance._source = src
+        return instance
 
     @property
     def source(self):
