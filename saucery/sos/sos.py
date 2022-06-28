@@ -83,6 +83,10 @@ class SOS(SauceryBase):
     def filesdir(self):
         return self.workdir / 'files'
 
+    @cached_property
+    def analysis_files(self):
+        return DirDict(self.workdir / 'analysis_files')
+
     def under_filesdir(self, path):
         return str(Path(path).resolve()).startswith(str(self.filesdir.resolve()))
 
@@ -112,6 +116,9 @@ class SOS(SauceryBase):
             LOGGER.error(f"Invalid filename '{filename}'")
             return None
         return path
+
+    def analysis_file(self, filename):
+        return self.analysis_files.path(filename)
 
     def _file_read(self, filename, func, *, command=None, strip=False):
         try:
@@ -364,10 +371,6 @@ class SOS(SauceryBase):
     @cached_property
     def external_analysis(self):
         return DirDict(self.workdir / 'external_analysis')
-
-    @cached_property
-    def analysis_files(self):
-        return DirDict(self.workdir / 'analysis_files')
 
     def analyse(self, *args, **kwargs):
         self._analyse(*args, **kwargs)

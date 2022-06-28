@@ -260,8 +260,9 @@ class SOSExtractionMember(dict):
         offsets = [0]
         pos = 0
         with self.full_path.open('wb') as f:
-            for block in iter(partial(tar.fileobj.read,
-                                      min(self.BLOCKSIZE, self.member.size - pos), b'')):
+            while self.member.size - pos > 0:
+                blocksize = min(4 * 1024 * 1024, self.member.size - pos)
+                block = tar.fileobj.read(blocksize)
                 f.write(block)
                 offsets += [pos + n.end() for n in re.finditer(b'\n', block)]
                 pos += len(block)
