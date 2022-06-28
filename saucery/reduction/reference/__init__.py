@@ -7,7 +7,6 @@ from .inireference import * # noqa
 from .jqreference import * # noqa
 from .reduce import * # noqa
 from .transform import * # noqa
-from .textreference import * # noqa
 
 from .reference import InvalidReferenceError
 from .reference import Reference
