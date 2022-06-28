@@ -81,8 +81,8 @@ class PathLineOffsets(type(Path())):
         Returns a list of our file's line offsets.
         '''
         try:
-            return self.read_text().strip().split(',')
-        except OSError:
+            return [int(o) for o in self.read_text().strip().split(',')]
+        except (OSError, ValueError):
             return self.detect_offsets()
 
     def detect_offsets(self):
