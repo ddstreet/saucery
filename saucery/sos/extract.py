@@ -11,7 +11,7 @@ from functools import cached_property
 from functools import partial
 from pathlib import Path
 
-from .lines import PathLineOffsets
+from ..lines import PathLineOffsets
 
 
 LOGGER = logging.getLogger(__name__)

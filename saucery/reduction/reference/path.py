@@ -1,12 +1,13 @@
 
 import logging
+import sys
 
 from collections.abc import Sequence
 from contextlib import suppress
 from functools import cached_property
 from pathlib import Path
 
-from ...sos.lines import PathLineOffsets
+from ...lines import PathLineOffsets
 
 
 LOGGER = logging.getLogger(__name__)
