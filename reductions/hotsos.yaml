@@ -3,18 +3,12 @@
   type: analysis_file
 - name: hotsos-potential-issues
   source: hotsos.json
-  type: chain
-  chain:
-  - type: jq
-    jq: '[.[]."potential-issues"|select(.)|.[]]|flatten'
-  - type: eval
+  type: jq
+  jq: '[.[]."potential-issues"|select(.)|.[]]|flatten'
 - name: hotsos-bugs-detected
   source: hotsos.json
-  type: chain
-  chain:
-  - type: jq
-    jq: '[.[]."bugs-detected"|select(.)|.[].desc]|flatten'
-  - type: eval
+  type: jq
+  jq: '[.[]."bugs-detected"|select(.)|.[].desc]|flatten'
 - description: Hotsos Potential Issues
   level: error
   name: hotsos-issue-analysis
