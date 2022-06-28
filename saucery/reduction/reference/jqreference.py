@@ -4,10 +4,10 @@ import subprocess
 from collections import ChainMap
 from shutil import which
 
-from .transform import TransformValueReference
+from .parse import TransformReference
 
 
-class JqReference(TransformValueReference):
+class JqReference(TransformReference):
     @classmethod
     def TYPE(cls):
         return 'jq'
@@ -33,7 +33,7 @@ class JqReference(TransformValueReference):
         cmd.append(self.get('jq'))
         return cmd
 
-    def transform_value(self, value):
+    def transform(self, value):
         result = subprocess.run(self.jqcmd, input=value,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
