@@ -368,10 +368,6 @@ class SOS(SauceryBase):
     case = FileProperty('case')
     customer = FileProperty('customer')
 
-    @cached_property
-    def external_analysis(self):
-        return DirDict(self.workdir / 'external_analysis')
-
     def analyse(self, *args, **kwargs):
         self._analyse(*args, **kwargs)
         return self.analysed
@@ -395,7 +391,7 @@ class SOS(SauceryBase):
 
         self.analysed = False
         del self.conclusions
-        self.external_analysis.clear()
+        self.analysis_files.clear()
         # Note, we keep existing case/customer values here
 
         a = SOSAnalysis(self)
@@ -419,6 +415,5 @@ class SOS(SauceryBase):
         else:
             self.customer = a.customer
 
-        self.external_analysis.update(a.external)
         self.conclusions = a.conclusions
         self.analysed = True

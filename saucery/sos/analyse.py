@@ -2,9 +2,10 @@
 import logging
 import subprocess
 
-from collections.abc import Mapping
 from contextlib import suppress
 from functools import cached_property
+
+from .mapping import SOSMapping
 
 
 LOGGER = logging.getLogger(__name__)
@@ -25,9 +26,7 @@ class SOSAnalysis(object):
     def analyse(self):
         '''Perform all analysis.
 
-        This only performs case/customer detection if the attribute is not currently set
-        for the sosreport, and only performs external analysis if external_analysis_keys
-        is configured with key names.
+        This only performs case/customer detection if the attribute is not currently set.
         '''
         if not self.sos.case:
             LOGGER.debug(f'Detecting case: {self.name}')
@@ -35,11 +34,6 @@ class SOSAnalysis(object):
         if not self.sos.customer:
             LOGGER.debug(f'Detecting customer: {self.name}')
             self.customer
-        # Note - need to perform external analysis *first*, as our built-in analysis
-        # might reference the external results
-        if self.external_keys:
-            LOGGER.debug(f'Performing external analysis: {self.name}')
-            self.external
         LOGGER.debug(f'Gathering conclusions: {self.name}')
         self.conclusions
 
@@ -86,23 +80,12 @@ class SOSAnalysis(object):
             LOGGER.info(f"Set 'customer' to '{customer}' based on configured lookup: {self.name}")
         return customer
 
-    @cached_property
-    def external_keys(self):
-        return self.sos.config.get('external_analysis_keys', '').split()
-
-    @cached_property
-    def external(self):
-        if not self.external_keys:
-            LOGGER.debug(f'No external analysis keys defined: {self.name}')
-            return {}
-        return {k: self.run_config_lookup(k) for k in self.external_keys}
-
     def run_config_lookup(self, key):
         cmd = self.sos.config.get(f'lookup_{key}')
         if not cmd:
             LOGGER.debug(f"No config for '{key}', skipping: {self.name}")
             return None
-        cmd = [c.format_map(SOSMapping(self.sos)) for c in cmd.split()]
+        cmd = SOSMapping(self.sos).format(cmd.split())
         cmdstr = ' '.join(cmd)
 
         LOGGER.debug(f"Running '{key}' command: {cmdstr}")
@@ -121,19 +104,3 @@ class SOSAnalysis(object):
 
         LOGGER.debug(f"Finished command for '{key}': {self.name}")
         return result.stdout
-
-
-class SOSMapping(Mapping):
-    def __init__(self, sos):
-        self.sos = sos
-
-    def __getitem__(self, key):
-        with suppress(AttributeError):
-            return getattr(self.sos, key)
-        raise KeyError(key)
-
-    def __iter__(self):
-        return (a for a in dir(self.sos) if not a.startswith('_'))
-
-    def __len__(self):
-        return len(list(self))
