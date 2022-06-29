@@ -103,19 +103,3 @@ class CommandReference(FileReference):
     def fileglob(self, source):
         return sorted(self.sos.fileglob(self._convert_source(source),
                                         command=self.get('command')) or [])
-
-
-class AnalysisFileReference(Reference):
-    '''AnalysisFileReference object.
-
-    This represents a reference to a file under analysis_files/.
-
-    The 'source' must be a single filename; this does not allow use of globs.
-    '''
-    @classmethod
-    def TYPE(cls):
-        return 'analysis_file'
-
-    @cached_property
-    def pathlist(self):
-        return ReferencePathList([self.sos.analysis_file(self.source)])
