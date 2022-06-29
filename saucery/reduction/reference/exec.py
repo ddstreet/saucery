@@ -16,13 +16,12 @@ class ExecReference(Reference):
 
     @classmethod
     def fields(cls):
-        return ChainMap({'exec': cls._field('text'),
-                         'params': cls._field(['text', 'list'], default=[])},
+        return ChainMap({'params': cls._field(['text', 'list'], default=[])},
                         super().fields())
 
     @property
     def cmd(self):
-        return [self.get('exec')] + SOSMapping(self.sos).format(self.get('params'))
+        return [self.source] + SOSMapping(self.sos).format(self.get('params'))
 
     def exec(self):
         result = subprocess.run(self.cmd,

@@ -1,6 +1,7 @@
 - name: hotsos.json
-  source: hotsos.json
-  type: analysis_file
+  source: hotsos
+  params: {filesdir}
+  type: exec
 - name: hotsos-potential-issues
   source: hotsos.json
   type: jq
