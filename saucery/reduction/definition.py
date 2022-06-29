@@ -170,7 +170,8 @@ class DefinitionField(object):
     the FIELD_TYPES keys.
 
     If 'fieldtypes' is set to only 'boolean' or only 'int', the value
-    will be coerced to a bool or int type value.
+    will be coerced to a bool or int type value. If 'list' is one of the
+    field types, the value will always be converted to a list.
 
     If 'default' is set, it will be used if this field is not set,
     and this field is considered optional; otherwise if 'default' is
@@ -206,7 +207,7 @@ class DefinitionField(object):
         if value is None:
             return None
 
-        if bool in self.fieldclasses:
+        if set([bool]) == set(self.fieldclasses):
             with suppress(Exception):
                 value = str(value).strip().lower()
                 if value in ('true', 'yes', '1'):
@@ -214,9 +215,13 @@ class DefinitionField(object):
                 if value in ('false', 'no', '0'):
                     return False
 
-        if int in self.fieldclasses:
+        if set([int]) == set(self.fieldclasses):
             with suppress(Exception):
                 return int(value)
+
+        if list in self.fieldclasses:
+            if not isinstance(value, list):
+                value = [value]
 
         return value
 

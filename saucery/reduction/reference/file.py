@@ -34,13 +34,6 @@ class FileReference(Reference):
                          'source': cls._field(['text', 'list'])},
                         super().fields())
 
-    @property
-    def source(self):
-        source = super().source
-        if not isinstance(source, list):
-            return [source]
-        return source
-
     @cached_property
     def pathlist(self):
         if self.get('noglob'):
