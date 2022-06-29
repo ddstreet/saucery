@@ -5,8 +5,6 @@ import subprocess
 from contextlib import suppress
 from functools import cached_property
 
-from .mapping import SOSMapping
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,7 +83,7 @@ class SOSAnalysis(object):
         if not cmd:
             LOGGER.debug(f"No config for '{key}', skipping: {self.name}")
             return None
-        cmd = SOSMapping(self.sos).format(cmd.split())
+        cmd = self.sos.mapping.format(cmd.split())
         cmdstr = ' '.join(cmd)
 
         LOGGER.debug(f"Running '{key}' command: {cmdstr}")

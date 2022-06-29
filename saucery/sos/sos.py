@@ -18,6 +18,7 @@ from .analyse import SOSAnalysis
 from .analyse import SOSAnalysisError
 from .extract import SOSExtraction
 from .extract import SOSExtractionError
+from .mapping import SOSMapping
 from .persistent import DirDict
 from .persistent import FileProperty
 from .squash import SOSSquash
@@ -74,6 +75,10 @@ class SOS(SauceryBase):
     @cached_property
     def reductions(self):
         return Reductions(self, self.reductionsdir)
+
+    @cached_property
+    def mapping(self):
+        return SOSMapping(self)
 
     @cached_property
     def workdir(self):

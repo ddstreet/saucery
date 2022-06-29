@@ -6,7 +6,6 @@ from functools import cached_property
 
 from .path import ReferencePathList
 from .reference import Reference
-from ...sos.mapping import SOSMapping
 
 
 class ExecReference(Reference):
@@ -21,7 +20,7 @@ class ExecReference(Reference):
 
     @property
     def cmd(self):
-        return [self.source] + SOSMapping(self.sos).format(self.get('params'))
+        return [self.source] + self.sos.mapping.format(self.get('params'))
 
     def exec(self):
         result = subprocess.run(self.cmd,
