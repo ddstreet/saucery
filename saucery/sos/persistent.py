@@ -134,4 +134,4 @@ class DirDict(MutableMapping):
         return iter([])
 
     def __len__(self):
-        return len(self)
+        return len(list(iter(self)))
