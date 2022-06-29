@@ -15,8 +15,7 @@ class JqReference(TransformReference):
     @classmethod
     def fields(cls):
         return ChainMap({'jq': cls._field('text'),
-                         'raw': cls._field('boolean', default=False),
-                         'env': cls._field('text', default='')},
+                         'raw': cls._field('boolean', default=False)},
                         super().fields())
 
     def setup(self):
