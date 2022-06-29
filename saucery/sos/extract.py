@@ -8,7 +8,6 @@ import tempfile
 
 from contextlib import suppress
 from functools import cached_property
-from functools import partial
 from pathlib import Path
 
 from ..lines import PathLineOffsets

@@ -1,8 +1,6 @@
 
-from collections import ChainMap
 from collections import UserDict
 from configparser import ConfigParser
-from functools import cached_property
 
 from .parse import ParseReference
 
@@ -27,14 +25,15 @@ class IniReference(ParseReference):
         return self._sections
 
     def _line_iterator(self, lines):
-        for l in lines:
-            self._line = l
-            yield l.value.decode(errors='replace')
+        for line in lines:
+            self._line = line
+            yield line.value.decode(errors='replace')
         self._line = None
         self._section = None
 
     def parse(self, pathlist):
         parser = None
+
         class dictcls(dict):
             def __getitem__(innerself, key):
                 value = super().__getitem__(key)

@@ -41,7 +41,7 @@ class ParseReference(Reference):
             return None
 
         if not self.parse_none_value and source.pathlist.value is None:
-                return None
+            return None
 
         return self.parse(source.pathlist)
 

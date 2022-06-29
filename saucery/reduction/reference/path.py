@@ -37,11 +37,11 @@ class ReferencePath(type(Path())):
 
     @cached_property
     def length(self):
-        l = self._length or sys.maxsize
+        maxlen = self._length or sys.maxsize
         if self._ref:
-            return min(l, max(0, self._ref.length - self._offset))
+            return max(min(self._ref.length - self._offset, maxlen), 0)
         with suppress(OSError):
-            return min(l, max(0, self.stat().st_size - self._offset))
+            return max(min(self.stat().st_size - self._offset, maxlen), 0)
         return 0
 
     def slice(self, offset, length=0):
@@ -77,7 +77,7 @@ class ReferencePath(type(Path())):
     def line_iterator(self):
         '''Iterate over our value, line-by-line.
 
-        This returns an iterable of ReferencePath objects, which each represent a line from our value.
+        This returns an iterable of ReferencePath objects, which each represent a line.
         '''
         offsets = self._path_line_offsets.line_offsets
         if offsets is None:
@@ -135,7 +135,7 @@ class ReferencePathList(Sequence):
     def line_iterator(self):
         '''Iterate over our value, line-by-line.
 
-        This returns an iterable of ReferencePath objects, which each represent a line from our value.
+        This returns an iterable of ReferencePath objects, which each represent a line.
         '''
         for referencepath in self:
             yield from referencepath.line_iterator
