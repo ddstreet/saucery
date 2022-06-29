@@ -1,6 +1,6 @@
 - name: hotsos.json
   source: hotsos
-  params: {filesdir}
+  params: '{filesdir}'
   type: exec
 - name: hotsos-potential-issues
   source: hotsos.json

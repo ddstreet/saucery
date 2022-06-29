@@ -16,7 +16,7 @@ class SOSMapping(Mapping):
         return (a for a in dir(self.sos) if not a.startswith('_'))
 
     def __len__(self):
-        return len(list(self))
+        return len(list(iter(self)))
 
     def format(self, params):
-        return [p.format_map(self) for p in params]
+        return [p.format_map(self) for p in map(str, params)]
