@@ -7,9 +7,10 @@ class SOSMapping(Mapping):
         self.sos = sos
 
     def __getitem__(self, key):
-        with suppress(AttributeError):
+        try:
             return getattr(self.sos, key)
-        raise KeyError(key)
+        except AttributeError:
+            raise KeyError(key)
 
     def __iter__(self):
         return (a for a in dir(self.sos) if not a.startswith('_'))
