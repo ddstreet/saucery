@@ -3,6 +3,7 @@ from abc import abstractmethod
 
 from ..definition import Definition
 from ..definition import InvalidDefinitionError
+from ..definition import DefinitionSourceDefinition
 
 
 class InvalidReferenceError(InvalidDefinitionError):
@@ -39,3 +40,13 @@ class Reference(Definition):
     def size(self):
         '''The size of this reference value.'''
         return self.pathlist.length
+
+
+class ReferenceSourceReference(Reference, DefinitionSourceDefinition):
+    '''ReferenceSourceReference class.
+
+    This represents a reference, where the 'source' is another Reference.
+    '''
+    @property
+    def source_class(self):
+        return Reference

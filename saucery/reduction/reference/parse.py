@@ -7,15 +7,13 @@ from functools import cached_property
 from shutil import which
 
 from .path import ReferencePathList
-from .reference import Reference
+from .reference import ReferenceSourceReference
 
 
-class ParseReference(Reference):
+class ParseReference(ReferenceSourceReference):
     '''ParseReference object.
 
     This base class should be used by any class that performs processing on another Reference.
-
-    The 'source' parameter must be a text string containing the name of a Reference.
 
     Implementations should put all processing work in parse() using the passed ReferencePathList,
     and returning a processed ReferencePathList.
@@ -43,15 +41,6 @@ class ParseReference(Reference):
         if the pathlist or pathlist.value is None.
         '''
         return False
-
-    @property
-    def source(self):
-        '''Return the source Reference.
-
-        Unlike Reference.source, this returns the actual source Reference instead of the
-        'source' field value.
-        '''
-        return self.reductions.reference(super().source)
 
     @cached_property
     def pathlist(self):

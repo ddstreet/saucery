@@ -156,6 +156,40 @@ class Definition(ABC, UserDict):
                     self._raise(f"conflicting fields: '{field}' and '{conflict}'")
 
 
+class DefinitionSourceDefinition(Definition):
+    '''DefinitionSourceDefinition class.
+
+    This requires the 'source' field to be a str name of a Definition.
+    '''
+    @property
+    def source(self):
+        '''Return the source Definition.
+
+        Unlike Definition.source, this returns the source Definition instead of the
+        'source' field value. If the source Definition is not found, this returns None.
+        '''
+        return self.reductions.get(super().source)
+
+    @property
+    def source_class(self):
+        '''The required class our source must be.
+
+        This should return a class or list of classes.
+        '''
+        return Definition
+
+    def setup(self):
+        super().setup()
+
+        if self.source is not None and not isinstance(self.source, self.source_class):
+            clsname = self.source.__class__.__name__
+            if isinstance(self.source_class, list):
+                classes = ' or '.join([c.__name__ for c in self.source_class])
+            else:
+                classes = self.source_class.__name__
+            self._raise(f'Source class is {clsname} but we require {classes}')
+
+
 class DefinitionField(object):
     '''DefinitionField class.
 
