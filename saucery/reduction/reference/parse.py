@@ -44,10 +44,18 @@ class ParseReference(Reference):
         '''
         return False
 
+    @property
+    def source(self):
+        '''Return the source Reference.
+
+        Unlike Reference.source, this returns the actual source Reference instead of the
+        'source' field value.
+        '''
+        return self.reductions.reference(super().source)
+
     @cached_property
     def pathlist(self):
-        source = self.reductions.reference(self.source)
-        pathlist = getattr(source, 'pathlist', None)
+        pathlist = getattr(self.source, 'pathlist', None)
         if not self.parse_none_value:
             if pathlist is None or pathlist.value is None:
                 return None
@@ -119,9 +127,9 @@ class ExecReference(TransformReference):
 
     @property
     def parse_none_value(self):
-        # Allow exec without any source
+        # Allow exec without any source, if 'source' field is unset
         # e.g. to use external program to process the entire sos filesdir/
-        return not self.source
+        return not self.get('source')
 
     @cached_property
     def exec_cmd(self):
