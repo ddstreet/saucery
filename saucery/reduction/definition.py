@@ -181,12 +181,12 @@ class DefinitionSourceDefinition(Definition):
     def setup(self):
         super().setup()
 
-        if self.source is not None and not isinstance(self.source, self.source_class):
+        source_classes = self.source_class
+        if not isinstance(source_classes, list):
+            source_classes = [source_classes]
+        if not isinstance(self.source, source_classes + [type(None)]):
             clsname = self.source.__class__.__name__
-            if isinstance(self.source_class, list):
-                classes = ' or '.join([c.__name__ for c in self.source_class])
-            else:
-                classes = self.source_class.__name__
+            classes = ' or '.join([c.__name__ for c in source_classes])
             self._raise(f'Source class is {clsname} but we require {classes}')
 
 
