@@ -16,7 +16,7 @@ class Conclusion(Mapping):
         conclusion result or normal state is actually accessed.
         '''
         return {
-            'name': self.analysis.name,
+            'name': self.analysis.get('name'),
             'level': self.analysis.level,
             'summary': self.analysis.summary,
             'description': self.analysis.description,

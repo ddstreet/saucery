@@ -53,7 +53,7 @@ class IniReference(ParseReference):
 
         parser = ConfigParser(default_section=self.NO_DEFAULT_SECTION,
                               strict=False, dict_type=dictcls)
-        parser.read_file(self._line_iterator(pathlist.line_iterator), self.name)
+        parser.read_file(self._line_iterator(pathlist.line_iterator), self.get('name'))
 
         return pathlist
 

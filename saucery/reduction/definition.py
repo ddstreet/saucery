@@ -82,7 +82,7 @@ class Definition(ABC, UserDict):
             self['name'] = str(uuid.uuid4())
 
         self._reductions = reductions
-        reductions[self.name] = self
+        reductions[self.get('name')] = self
 
         self.setup()
 
@@ -93,14 +93,6 @@ class Definition(ABC, UserDict):
     @property
     def sos(self):
         return self.reductions.sos
-
-    @property
-    def name(self):
-        return self.get('name')
-
-    @property
-    def type(self):
-        return self.get('type')
 
     @cached_property
     def source(self):
@@ -121,7 +113,9 @@ class Definition(ABC, UserDict):
         return self.json
 
     def _raise(self, msg, *args, **kwargs):
-        raise self.ERROR_CLASS(f'{self.__class__.__name__}({self.name}): {msg}', *args, **kwargs)
+        clsname = self.__class__.__name__
+        name = self.get('name')
+        raise self.ERROR_CLASS(f'{clsname}({name}): {msg}', *args, **kwargs)
 
     def __missing__(self, field):
         if field in self.fields():

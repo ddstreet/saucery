@@ -80,9 +80,11 @@ class TransformReference(ParseReference):
         if not self.parse_none_value and value is None:
             return None
 
-        self.sos.analysis_files[self.name] = self.transform(value)
+        name = self.get('name')
 
-        return ReferencePathList([self.sos.analysis_files.path(self.name)])
+        self.sos.analysis_files[name] = self.transform(value)
+
+        return ReferencePathList([self.sos.analysis_files.path(name)])
 
 
 class ExecReference(TransformReference):
