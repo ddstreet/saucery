@@ -52,67 +52,52 @@ class Analysis(Definition):
     def conclusion(self):
         return Conclusion(self)
 
-    def _analyse(self):
-        '''Perform the analysis.
-
-        By default, this simply gets the results.
-        '''
-        self._results
-
-    def analyse(self):
-        self._duration
-
-    @cached_property
-    def _duration(self):
-        start = datetime.now()
-        self._analyse()
-        end = datetime.now()
-        return end - start
-
     @property
     def duration(self):
-        self.analyse()
+        self.results
         return self._duration
 
     @property
+    @abstractmethod
     def _results(self):
-        if self.source_value() is None:
-            return None
-        return self.source_value()
+        pass
 
-    @property
+    @cached_property
     def results(self):
         '''Analysis results description.
 
         Returns None if no analysis could be performed, otherwise returns a list
         of strings describing the results of the analysis.
-        '''
-        self.analyse()
-        return self._results
 
-    @property
-    def _normal(self):
-        if self._results is None:
-            return None
-        return not self._results
+        Subclasses should not override this, but instead should implement _results
+        so this class can generate the analysis duration.
+        '''
+        start = datetime.now()
+        try:
+            return self._results
+        finally:
+            self._duration = datetime.now() - start
 
     @property
     def normal(self):
         '''If the analysis results are normal.
 
         Returns None if no analysis could be performed, otherwise returns True
-        if the analysis results are 'normal', and False if the analysis results
-        are not 'normal'.
+        if the analysis results are 'normal' (False), and False if the analysis
+        results are not 'normal' (True).
         '''
-        self.analyse()
-        return self._normal
+        if self.results is None:
+            return None
+        return not self.results
 
-    def source_reference(self, source=None):
-        return self._reductions.get(source or self.source)
+    @property
+    def source_reference(self):
+        return self.reductions.reference(self.source)
 
-    def source_value(self, source=None):
-        ref = self.source_reference(source)
-        if not ref:
+    @property
+    def source_value(self):
+        ref = self.source_reference
+        if ref is None:
             return None
         return ref.value
 
