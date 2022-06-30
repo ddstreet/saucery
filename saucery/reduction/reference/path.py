@@ -92,6 +92,20 @@ class ReferencePath(type(Path())):
             yield ReferencePath(self, offset=pos, length=o - pos)
             pos = o
 
+    def regex_iterator(self, pattern):
+        '''Iterate over our value, returning matches for the provided regex pattern.
+
+        This returns an iterable of ReferencePath objects, which each represent a
+        section of our value that matches the regex pattern.
+
+        This will *not* include any 'null' (0-length) matches.
+        '''
+        for match in re.findall(pattern, self.value):
+            matchlen = match.end() - match.start()
+            if not matchlen:
+                continue
+            yield ReferencePath(self, offset=match.start(), length=matchlen)
+
     @cached_property
     def _value(self):
         with suppress(OSError):
@@ -139,6 +153,32 @@ class ReferencePathList(Sequence):
         '''
         for referencepath in self:
             yield from referencepath.line_iterator
+
+    @property
+    def line_pathlist(self):
+        '''ReferencePathList of each line in our value.
+
+        This returns our line_iterator wrapped in a new ReferencePathList.
+        '''
+        return ReferencePathList(self.line_iterator)
+
+    def regex_iterator(self, pattern):
+        '''Iterate over our value, returning matches for the provided regex pattern.
+
+        This returns an iterable of ReferencePath objects, which each represent a
+        section of our value that matches the regex pattern.
+
+        This will *not* include any 'null' (0-length) matches.
+        '''
+        for referencepath in self:
+            yield from referencepath.regex_iterator(pattern)
+
+    def regex_pathlist(self, pattern):
+        '''ReferencePathList of each match of our value for the pattern.
+
+        This returns our regex_iterator wrapped in a new ReferencePathList.
+        '''
+        return ReferencePathList(self.regex_iterator(pattern))
 
     @property
     def value(self):
