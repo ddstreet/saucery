@@ -9,7 +9,7 @@ from .reference import Reference
 
 
 class FileReference(Reference):
-    '''FileReference object.
+    '''FileReference class.
 
     This represents a reference to file(s) inside the SOS.
 
@@ -53,7 +53,7 @@ class FileReference(Reference):
 
 
 class SubdirFileReference(FileReference):
-    '''SubdirFileReference object.
+    '''SubdirFileReference class.
 
     This represents a reference to file(s) under a subdir in the sosreport.
 
@@ -77,7 +77,7 @@ class SubdirFileReference(FileReference):
 
 
 class CommandReference(FileReference):
-    '''CommandReference object.
+    '''CommandReference class.
 
     This represents a reference to a sos_commands file(s) inside the SOS.
 

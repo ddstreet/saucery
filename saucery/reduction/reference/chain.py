@@ -6,7 +6,7 @@ from .reference import Reference
 
 
 class ChainReference(Reference):
-    '''ChainReference object.
+    '''ChainReference class.
 
     This creates a chain of references.
 

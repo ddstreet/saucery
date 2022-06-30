@@ -15,7 +15,7 @@ class InvalidAnalysisError(InvalidDefinitionError):
 
 
 class Analysis(Definition):
-    '''Analysis object.
+    '''Analysis class.
 
     This represents an analysis of reference(s).
     '''

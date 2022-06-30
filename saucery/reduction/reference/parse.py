@@ -11,7 +11,7 @@ from .reference import ReferenceSourceReference
 
 
 class ParseReference(ReferenceSourceReference):
-    '''ParseReference object.
+    '''ParseReference class.
 
     This base class should be used by any class that performs processing on another Reference.
 
@@ -53,7 +53,7 @@ class ParseReference(ReferenceSourceReference):
 
 
 class TransformReference(ParseReference):
-    '''TransformReference object.
+    '''TransformReference class.
 
     This operates similarly to ParseReference, except subclasses should implement the transform()
     method, and return the transformed value as bytes, or None.
@@ -85,7 +85,7 @@ class TransformReference(ParseReference):
 
 
 class ExecReference(TransformReference):
-    '''ExecReference object.
+    '''ExecReference class.
 
     This extends TransformReference, and runs an external program to transform the source value.
 
@@ -137,7 +137,7 @@ class ExecReference(TransformReference):
 
 
 class JqReference(ExecReference):
-    '''JqReference object.
+    '''JqReference class.
 
     This extends ExecReference, and sets the default of the 'exec' field to 'jq'.
 

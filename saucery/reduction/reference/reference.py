@@ -11,7 +11,7 @@ class InvalidReferenceError(InvalidDefinitionError):
 
 
 class Reference(Definition):
-    '''Reference object.
+    '''Reference class.
 
     This represents a reference to content from the SOS.
     '''
@@ -32,7 +32,7 @@ class Reference(Definition):
     def value(self):
         '''The entire value of this reference.
 
-        Returns a bytes object.
+        Returns bytes.
         '''
         return self.pathlist.value
 

@@ -38,7 +38,7 @@ class LogicalAnalysis(Analysis):
 
 
 class AndAnalysis(LogicalAnalysis):
-    '''AndAnalysis object.
+    '''AndAnalysis class.
 
     This requires all listed analysis definition to be normal.
 
@@ -54,7 +54,7 @@ class AndAnalysis(LogicalAnalysis):
 
 
 class OrAnalysis(LogicalAnalysis):
-    '''OrAnalysis object.
+    '''OrAnalysis class.
 
     This requires any listed analysis definition to be normal.
 

@@ -13,7 +13,7 @@ from .comparison import StringEqComparison
 
 
 class ComparisonAnalysis(Analysis):
-    '''ComparisonAnalysis object.
+    '''ComparisonAnalysis class.
 
     This compares the source reference value to a specified value.
 
@@ -66,7 +66,7 @@ class IndirectComparisonAnalysis(ComparisonAnalysis):
 
 
 class TextComparisonAnalysis(ComparisonAnalysis):
-    '''TextAnalysis object.
+    '''TextAnalysis class.
 
     Analysis of string value.
 
@@ -141,7 +141,7 @@ class GtAnalysis(ComparisonAnalysis):
 
 
 class DictAnalysis(ComparisonAnalysis):
-    '''DictAnalysis object.
+    '''DictAnalysis class.
 
     This compares two dictionaries.
 
@@ -269,7 +269,7 @@ class IndirectDictGtAnalysis(IndirectDictAnalysis, GtAnalysis):
 
 
 class DictFieldAnalysis(ComparisonAnalysis):
-    '''DictFieldAnalysis object.
+    '''DictFieldAnalysis class.
 
     This compares a field in the source DictReference to a provided value.
 

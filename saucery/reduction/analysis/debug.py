@@ -5,7 +5,7 @@ from .analysis import Analysis
 
 
 class DebugAnalysis(Analysis):
-    '''DebugAnalysis object.
+    '''DebugAnalysis class.
 
     This creates an informational/debug conclusion.
 
