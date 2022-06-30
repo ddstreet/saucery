@@ -36,7 +36,8 @@ class SOSAnalysis(object):
         self.conclusions
 
     def _get_conclusion(self, analysis):
-        LOGGER.debug(f'Getting conclusion for {analysis.name}: {self.name}')
+        analysis_name = analysis.get('name')
+        LOGGER.debug(f'Getting conclusion for {analysis_name}: {self.name}')
         with suppress(Exception):
             return dict(analysis.conclusion)
         LOGGER.exception(f'Analysis {analysis.name} failed, skipping')

@@ -107,3 +107,7 @@ class BasicAnalysis(Analysis):
     @classmethod
     def TYPE(cls):
         return 'analysis'
+
+    @property
+    def _results(self):
+        return self.source_value
