@@ -178,7 +178,7 @@ class DictReference(ParseReference):
         '''
         pathdict = super().pathlist
         if not isinstance(pathdict, (ReferencePathDict, type(None))):
-            self._raise(f'DictReference class must return ReferencePathDict from parse()')
+            self._raise('DictReference class must return ReferencePathDict from parse()')
 
         return pathdict
 

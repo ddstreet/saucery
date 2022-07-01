@@ -150,7 +150,7 @@ class KeyValueDictReference(IniSectionReference):
         yield f'[{self._section_name}]'
         yield from super()._line_iterator(lines)
 
-    
+
 class IniSection(UserDict):
     def __init__(self, parser, name):
         super().__init__()

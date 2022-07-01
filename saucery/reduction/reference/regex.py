@@ -1,5 +1,5 @@
 
-import re
+from collections import ChainMap
 
 from .parse import ParseReference
 
@@ -20,4 +20,4 @@ class RegexReference(ParseReference):
                         super().fields())
 
     def parse(self, pathlist):
-        return pathlist.regex_pathlist(self.get('regex')))
+        return pathlist.regex_pathlist(self.get('regex'))

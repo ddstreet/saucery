@@ -1,8 +1,8 @@
 
 import logging
+import re
 import sys
 
-from collections import namedtuple
 from collections.abc import Collection
 from collections.abc import Mapping
 from contextlib import suppress
@@ -102,7 +102,7 @@ class ReferencePath(type(Path())):
 
         This will *not* include any 'null' (0-length) matches.
         '''
-        for match in re.findall(pattern, self.value):
+        for match in re.finditer(pattern, self.value):
             matchlen = match.end() - match.start()
             if not matchlen:
                 continue
