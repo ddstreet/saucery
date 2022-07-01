@@ -3,7 +3,7 @@
 # 'register' their type with Definition
 from .chain import * # noqa
 from .file import * # noqa
-from .ini import * # noqa
+from .dict import * # noqa
 from .parse import * # noqa
 
 from .reference import InvalidReferenceError

@@ -2,7 +2,9 @@
 import logging
 import sys
 
-from collections.abc import Sequence
+from collections import namedtuple
+from collections.abc import Collection
+from collections.abc import Mapping
 from contextlib import suppress
 from functools import cached_property
 from pathlib import Path
@@ -130,20 +132,25 @@ class ReferencePath(type(Path())):
         return self._value
 
 
-class ReferencePathList(Sequence):
-    def __init__(self, sources):
-        self._sources = [s if isinstance(s, ReferencePath) else ReferencePath(s)
-                         for s in sources]
+class ReferencePathList(Collection):
+    def __init__(self, paths):
+        if any(map(lambda p: not isinstance(p, Path), paths)):
+            raise ValueError('ReferencePathList entries must be Path or ReferencePath objects.')
+        self._paths = [p if isinstance(p, ReferencePath) else ReferencePath(p)
+                       for p in paths]
 
-    def __getitem__(self, index):
-        return self._sources[index]
+    def __contains__(self, item):
+        return item in iter(self)
+
+    def __iter__(self):
+        return iter(self._paths)
 
     def __len__(self):
-        return len(self._sources)
+        return len(self._paths)
 
     @property
     def length(self):
-        return sum([s.length for s in self])
+        return sum([p.length for p in self._paths])
 
     @property
     def line_iterator(self):
@@ -151,7 +158,7 @@ class ReferencePathList(Sequence):
 
         This returns an iterable of ReferencePath objects, which each represent a line.
         '''
-        for referencepath in self:
+        for referencepath in self._paths:
             yield from referencepath.line_iterator
 
     @property
@@ -170,7 +177,7 @@ class ReferencePathList(Sequence):
 
         This will *not* include any 'null' (0-length) matches.
         '''
-        for referencepath in self:
+        for referencepath in self._paths:
             yield from referencepath.regex_iterator(pattern)
 
     def regex_pathlist(self, pattern):
@@ -187,14 +194,14 @@ class ReferencePathList(Sequence):
         If all our objects have None value, return None.
         Otherwise, return the concatenated value of all our objects' value as bytes.
         '''
-        sources = [s for s in self if s.value is not None]
-        if not sources:
+        values = [p.value for p in self._paths if p.value is not None]
+        if not values:
             return None
-        return b''.join([s.value for s in sources])
+        return b''.join(values)
 
     def _slice(self, offset, length):
         length = length or sys.maxsize
-        for referencepath in self:
+        for referencepath in self._paths:
             if referencepath.length <= offset:
                 offset -= referencepath.length
             else:
@@ -206,3 +213,39 @@ class ReferencePathList(Sequence):
 
     def slice(self, offset, length=0):
         return ReferencePathList(list(self._range(offset, length)))
+
+
+class ReferencePathDict(ReferencePathList, Mapping):
+    '''ReferencePathDict class.
+
+    This provides a key-value mapping to two values; both a processed value, and the
+    ReferencePath backing the processed key-value pair.
+    '''
+    def __init__(self, paths):
+        '''Initialize the instance.
+
+        Unlike the ReferencePathList constructor, the 'paths' parameter must be a dict where
+        each key maps to a 2-tuple value; the first entry in the tuple is the processed value,
+        while the second entry in the tuple is the ReferencePath.
+
+        When accessed as a Mapping, using either [key] or get(key), this will return the
+        processed value. To access the ReferencePath for a key, use path(key).
+        '''
+        self._paths_dict = paths
+
+    @cached_property
+    def _paths(self):
+        return [v[1] for v in self._paths_dict.values()]
+
+    @cached_property
+    def pathlist(self):
+        return ReferencePathList(self._paths)
+
+    def path(self, key):
+        return self._paths_dict[key][1]
+
+    def __getitem__(self, key):
+        return self._paths_dict[key][0]
+
+    def __iter__(self):
+        return iter(self._paths_dict.keys())

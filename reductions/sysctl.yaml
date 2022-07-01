@@ -1,7 +1,13 @@
-- name: sysctl_config
+- name: sysctl_config_files
   source: /etc/sysctl.d/*.conf
   type: file
+- name: sysctl_config
+  type: keyvaluedict
+  source: sysctl_config_files
 - command: kernel
-  name: sysctl_real
+  name: sysctl_all_command
   source: sysctl_-a
   type: command
+- name: sysctl_values
+  type: keyvaluedict
+  source: sysctl_all_command
