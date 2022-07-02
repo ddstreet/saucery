@@ -21,9 +21,10 @@ class ComparisonAnalysis(Analysis):
       to: The value to compare to
     '''
     @classmethod
-    def fields(cls):
-        return ChainMap({'to': cls._field('text')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'to': 'text',
+        }
 
     @property
     @abstractmethod
@@ -78,10 +79,18 @@ class TextComparisonAnalysis(ComparisonAnalysis):
     before comparison.
     '''
     @classmethod
-    def fields(cls):
-        return ChainMap({'strip': cls._field('bool', default=True),
-                         'ignore_whitespace': cls._field('bool', default=True)},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'strip': 'bool',
+            'ignore_whitespace': 'bool',
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'strip': True,
+            'ignore_whitespace': True,
+        }.get(field, super()._field_default(field))
 
     @property
     def comparison_kwargs(self):
@@ -156,14 +165,25 @@ class DictAnalysis(ComparisonAnalysis):
       to: The dict to compare to
     '''
     @classmethod
-    def fields(cls):
-        return ChainMap({'fields': cls._field('list', default=[]),
-                         'fields_from_source': cls._field('bool', default=False),
-                         'fields_from_to': cls._field('bool', default=True),
-                         'ignore_fields': cls._field('list', default=[]),
-                         'ignore_missing': cls._field('bool', default=False),
-                         'to': cls._field('dict')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'fields': 'list',
+            'fields_from_source': 'bool',
+            'fields_from_to': 'bool',
+            'ignore_fields': 'list',
+            'ignore_missing': 'bool',
+            'to': 'dict',
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'fields': [],
+            'fields_from_source': False,
+            'fields_from_to': True,
+            'ignore_fields': [],
+            'ignore_missing': False,
+        }.get(field, super()._field_default(field))
 
     @cached_property
     def comparison(self):
@@ -227,11 +247,19 @@ class DictGtAnalysis(DictAnalysis, GtAnalysis):
 
 class IndirectDictAnalysis(DictAnalysis):
     @classmethod
-    def fields(cls):
-        return ChainMap({'fields_from_source': cls._field('bool', default=True),
-                         'fields_from_to': cls._field('bool', default=False),
-                         'to': cls._field('text')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'fields_from_source': 'bool',
+            'fields_from_to': 'bool',
+            'to': 'text',
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'fields_from_source': True,
+            'fields_from_to': False,
+        }.get(field, super()._field_default(field))
 
     @property
     def comparison_b(self):
@@ -280,9 +308,10 @@ class DictFieldAnalysis(ComparisonAnalysis):
       to: The value to compare to
     '''
     @classmethod
-    def fields(cls):
-        return ChainMap({'field': cls._field('text')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'field': 'text',
+        }
 
     @property
     def comparison_a(self):

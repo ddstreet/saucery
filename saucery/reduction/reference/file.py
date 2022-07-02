@@ -1,5 +1,4 @@
 
-from collections import ChainMap
 from itertools import chain
 from functools import cached_property
 from pathlib import Path
@@ -29,10 +28,17 @@ class FileReference(Reference):
         return 'file'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'noglob': cls._field('bool', default=False),
-                         'source': cls._field(['text', 'list'])},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'noglob': 'bool',
+            'source': ['text', 'list'],
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'noglob': False,
+        }.get(field, super()._field_default(field))
 
     @cached_property
     def pathlist(self):
@@ -68,9 +74,10 @@ class SubdirFileReference(FileReference):
         return 'subdirfile'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'subdir': cls._field('text')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'subdir': 'text',
+        }
 
     def _convert_source(self, source):
         return str(Path(self.get('subdir')) / source.lstrip('/'))
@@ -92,9 +99,10 @@ class CommandReference(FileReference):
         return 'command'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'command': cls._field('text')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'command': 'text',
+        }
 
     def file(self, source):
         return self.sos.file(self._convert_source(source),

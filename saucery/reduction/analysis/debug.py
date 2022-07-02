@@ -1,6 +1,4 @@
 
-from collections import ChainMap
-
 from .analysis import Analysis
 
 
@@ -22,9 +20,16 @@ class DebugAnalysis(Analysis):
         return 'debug'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'level': cls._field('text', default='debug')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'level': 'text'
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'level': 'debug',
+        }.get(field, super()._field_default(field))
 
     @property
     def default_description(self):

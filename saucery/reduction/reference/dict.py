@@ -28,9 +28,16 @@ class IniReference(ParseReference):
         return 'ini'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'default_section': cls._field('text', default=configparser.DEFAULTSECT)},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'default_section': 'text',
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'default_section': configparser.DEFAULTSECT,
+        }.get(field, super()._field_default(field))
 
     def setup(self):
         super().setup()
@@ -102,9 +109,10 @@ class IniSectionReference(IniReference, DictReference):
         return 'inisection'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'section': cls._field('text')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'section': 'text',
+        }
 
     @property
     def sections(self):
@@ -134,11 +142,8 @@ class KeyValueDictReference(IniSectionReference):
         return 'keyvaluedict'
 
     @classmethod
-    def fields(cls):
-        f = dict(super().fields())
-        del f['default_section']
-        del f['section']
-        return f
+    def _remove_fields(cls):
+        return ['section', 'default_section']
 
     @property
     def _section_name(self):

@@ -1,5 +1,4 @@
 
-from collections import ChainMap
 from copy import deepcopy
 
 from .reference import Reference
@@ -23,9 +22,10 @@ class ChainReference(Reference):
         return 'chain'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'chain': cls._field('list')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'chain': 'list',
+        }
 
     def setup(self):
         super().setup()

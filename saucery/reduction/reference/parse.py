@@ -2,7 +2,6 @@
 import subprocess
 
 from abc import abstractmethod
-from collections import ChainMap
 from functools import cached_property
 from shutil import which
 
@@ -104,11 +103,19 @@ class ExecReference(TransformReference):
         return 'exec'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'source': cls._field('text', default=''),
-                         'exec': cls._field('text'),
-                         'params': cls._field(['text', 'list'], default=[])},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'source': 'text',
+            'exec': 'text',
+            'params': ['text', 'list'],
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'source': '',
+            'params': [],
+        }.get(field, super()._field_default(field))
 
     def setup(self):
         super().setup()
@@ -151,11 +158,18 @@ class JqReference(ExecReference):
         return 'jq'
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'source': cls._field('text'),
-                         'exec': cls._field('text', default='jq'),
-                         'jq': cls._field('text')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'source': 'text',
+            'exec': 'text',
+            'jq': 'text',
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'exec': 'jq',
+        }.get(field, super()._field_default(field))
 
     @property
     def exec_cmd(self):

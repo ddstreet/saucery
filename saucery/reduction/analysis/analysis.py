@@ -1,6 +1,5 @@
 
 from abc import abstractmethod
-from collections import ChainMap
 from datetime import datetime
 from functools import cached_property
 
@@ -23,11 +22,20 @@ class Analysis(Definition):
     VALID_LEVELS = ('critical', 'error', 'warning', 'info', 'debug')
 
     @classmethod
-    def fields(cls):
-        return ChainMap({'level': cls._field('text', default='info'),
-                         'description': cls._field('text', default=''),
-                         'summary': cls._field('text', default='')},
-                        super().fields())
+    def _add_fields(cls):
+        return {
+            'level': 'text',
+            'description': 'text',
+            'summary': 'text',
+        }
+
+    @classmethod
+    def _field_default(cls, field):
+        return {
+            'level': 'info',
+            'description': '',
+            'summary': '',
+        }.get(field, super()._field_default(field))
 
     def setup(self):
         super().setup()

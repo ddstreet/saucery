@@ -7,11 +7,6 @@ from .analysis import Analysis
 
 
 class LogicalAnalysis(Analysis):
-    @classmethod
-    def fields(cls):
-        return ChainMap({cls.TYPE(): cls._field('list')},
-                        super().fields())
-
     def setup(self):
         super().setup()
         self.analyses = [self.anonymous(ChainMap({'source': self.source}, definition))
@@ -49,6 +44,12 @@ class AndAnalysis(LogicalAnalysis):
     def TYPE(cls):
         return 'and'
 
+    @classmethod
+    def _add_fields(cls):
+        return {
+            'and': 'list',
+        }
+
     def is_normal(self, values):
         return all(values)
 
@@ -64,6 +65,12 @@ class OrAnalysis(LogicalAnalysis):
     @classmethod
     def TYPE(cls):
         return 'or'
+
+    @classmethod
+    def _add_fields(cls):
+        return {
+            'or': 'list',
+        }
 
     def is_normal(self, values):
         return any(values)

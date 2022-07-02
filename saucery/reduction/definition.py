@@ -57,16 +57,58 @@ class Definition(ABC, UserDict):
             cls.ABSTRACT_SUBCLASSES[cls.TYPE()] = cls
 
     @classmethod
-    def _field(cls, *args, **kwargs):
-        return DefinitionField(*args, **kwargs)
+    def _add_fields(cls):
+        '''Fields to add for this class.
+
+        Subclasses should NOT call super()!
+        '''
+        return {
+            'name': 'text',
+            'type': 'text',
+            'source': 'text',
+        }
 
     @classmethod
-    def fields(cls):
-        return {
-            'name': cls._field('text'),
-            'type': cls._field('text'),
-            'source': cls._field('text'),
-        }
+    def _remove_fields(cls):
+        '''Fields to remove for this class.
+
+        Subclasses should NOT call super()!
+        '''
+        return None
+
+    @classmethod
+    def _fields(cls):
+        fields = {}
+        for c in reversed(inspect.getmro(cls)):
+            if not issubclass(c, Definition):
+                continue
+            with suppress(KeyError):
+                func = '_add_fields'
+                if not isinstance(c.__dict__[func], classmethod):
+                    raise cls.ERROR_CLASS(f'{c.__name__}.{func} must be a classmethod')
+                fields.update(getattr(c, func)() or {})
+            with suppress(KeyError):
+                func = '_remove_fields'
+                if not isinstance(c.__dict__[func], classmethod):
+                    raise cls.ERROR_CLASS(f'{c.__name__}.{func} must be a classmethod')
+                for f in getattr(c, func)() or []:
+                    fields.pop(f, None)
+        return fields
+
+    @classmethod
+    def _field_default(cls, field):
+        return None
+
+    @classmethod
+    def _field_conflicts(cls, field):
+        return None
+
+    @cached_property
+    def fields(self):
+        return {k: DefinitionField(v,
+                                   default=self._field_default(k),
+                                   conflicts=self._field_conflicts(k))
+                for k, v in self._fields().items()}
 
     def __init__(self, definition, reductions, *, anonymous=False):
         '''Definition init.
@@ -118,8 +160,8 @@ class Definition(ABC, UserDict):
         raise self.ERROR_CLASS(f'{clsname}({name}): {msg}', *args, **kwargs)
 
     def __missing__(self, field):
-        if field in self.fields():
-            return self.fields().get(field).default
+        if field in self.fields:
+            return self.fields.get(field).default
         raise KeyError(field)
 
     def setup(self):
@@ -132,26 +174,26 @@ class Definition(ABC, UserDict):
 
         try:
             for field, value in self.items():
-                definitionfield = self.fields().get(field)
+                definitionfield = self.fields.get(field)
                 self[field] = definitionfield.convert(value)
                 definitionfield.check(self[field])
         except InvalidDefinitionError as e:
             self._raise(str(e))
 
     def check_invalid_fields(self):
-        invalid = set(self.keys()) - set(self.fields().keys())
+        invalid = set(self.keys()) - set(self.fields.keys())
         if invalid:
             self._raise(f"invalid fields: '{','.join(invalid)}'")
 
     def check_required_fields(self):
-        required = set(f for f, v in self.fields().items() if v.default is None)
+        required = set(f for f, v in self.fields.items() if v.default is None)
         missing = required - set(self.keys())
         if missing:
             self._raise(f"required fields: '{','.join(missing)}'")
 
     def check_conflicting_fields(self):
         for field in self.keys():
-            for conflict in (self.fields().get(field).conflicts or []):
+            for conflict in (self.fields.get(field).conflicts or []):
                 if conflict in self:
                     self._raise(f"conflicting fields: '{field}' and '{conflict}'")
 
