@@ -197,7 +197,7 @@ class DefinitionField(object):
     this field, or a list of possible types. The value must be one of
     the FIELD_TYPES keys.
 
-    If 'fieldtypes' is set to only 'boolean' or only 'int', the value
+    If 'fieldtypes' is set to only 'bool' or only 'int', the value
     will be coerced to a bool or int type value. If 'list' is one of the
     field types, the value will always be converted to a list.
 
@@ -209,7 +209,7 @@ class DefinitionField(object):
     field conflicts with.
     '''
     FIELD_CLASSES = {
-        'boolean': bool,
+        'bool': bool,
         'dict': dict,
         'int': int,
         'list': list,

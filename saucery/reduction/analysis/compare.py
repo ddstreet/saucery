@@ -71,16 +71,16 @@ class TextComparisonAnalysis(ComparisonAnalysis):
     Analysis of string value.
 
     This implementation has optional keys:
-      strip: If the value should be stripped or not (boolean, default True)
-      ignore_whitespace: If whitespace differences should be ignored (boolean, default True)
+      strip: If the value should be stripped or not (bool, default True)
+      ignore_whitespace: If whitespace differences should be ignored (bool, default True)
 
     Note 'ignore_whitespace' will only collapse each whitespace instance into a single space
     before comparison.
     '''
     @classmethod
     def fields(cls):
-        return ChainMap({'strip': cls._field('boolean', default=True),
-                         'ignore_whitespace': cls._field('boolean', default=True)},
+        return ChainMap({'strip': cls._field('bool', default=True),
+                         'ignore_whitespace': cls._field('bool', default=True)},
                         super().fields())
 
     @property
@@ -158,10 +158,10 @@ class DictAnalysis(ComparisonAnalysis):
     @classmethod
     def fields(cls):
         return ChainMap({'fields': cls._field('list', default=[]),
-                         'fields_from_source': cls._field('boolean', default=False),
-                         'fields_from_to': cls._field('boolean', default=True),
+                         'fields_from_source': cls._field('bool', default=False),
+                         'fields_from_to': cls._field('bool', default=True),
                          'ignore_fields': cls._field('list', default=[]),
-                         'ignore_missing': cls._field('boolean', default=False),
+                         'ignore_missing': cls._field('bool', default=False),
                          'to': cls._field('dict')},
                         super().fields())
 
@@ -228,8 +228,8 @@ class DictGtAnalysis(DictAnalysis, GtAnalysis):
 class IndirectDictAnalysis(DictAnalysis):
     @classmethod
     def fields(cls):
-        return ChainMap({'fields_from_source': cls._field('boolean', default=True),
-                         'fields_from_to': cls._field('boolean', default=False),
+        return ChainMap({'fields_from_source': cls._field('bool', default=True),
+                         'fields_from_to': cls._field('bool', default=False),
                          'to': cls._field('text')},
                         super().fields())
 

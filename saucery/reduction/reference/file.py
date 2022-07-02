@@ -30,7 +30,7 @@ class FileReference(Reference):
 
     @classmethod
     def fields(cls):
-        return ChainMap({'noglob': cls._field('boolean', default=False),
+        return ChainMap({'noglob': cls._field('bool', default=False),
                          'source': cls._field(['text', 'list'])},
                         super().fields())
 
