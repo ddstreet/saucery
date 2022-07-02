@@ -47,7 +47,7 @@ class AndAnalysis(LogicalAnalysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'and': 'list',
+            'and': list,
         }
 
     def is_normal(self, values):
@@ -69,7 +69,7 @@ class OrAnalysis(LogicalAnalysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'or': 'list',
+            'or': list,
         }
 
     def is_normal(self, values):

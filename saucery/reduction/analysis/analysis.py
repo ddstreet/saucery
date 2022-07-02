@@ -24,9 +24,9 @@ class Analysis(Definition):
     @classmethod
     def _add_fields(cls):
         return {
-            'level': 'text',
-            'description': 'text',
-            'summary': 'text',
+            'level': str,
+            'description': str,
+            'summary': str,
         }
 
     @classmethod

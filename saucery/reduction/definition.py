@@ -63,9 +63,9 @@ class Definition(ABC, UserDict):
         Subclasses should NOT call super()!
         '''
         return {
-            'name': 'text',
-            'type': 'text',
-            'source': 'text',
+            'name': str,
+            'type': str,
+            'source': str,
         }
 
     @classmethod
@@ -250,35 +250,34 @@ class DefinitionField(object):
     If 'conflicts' is set, it should be a list of field names this
     field conflicts with.
     '''
-    FIELD_CLASSES = {
-        'bool': bool,
-        'dict': dict,
-        'int': int,
-        'list': list,
-        'text': str,
-        'bytes': bytes,
-    }
+    FIELD_CLASSES = [
+        bool,
+        bytes,
+        dict,
+        int,
+        list,
+        str,
+    ]
 
-    @classmethod
-    def field_class(cls, fieldtype):
-        try:
-            return cls.FIELD_CLASSES[fieldtype]
-        except KeyError:
-            raise InvalidDefinitionError(f"Invalid field type '{fieldtype}'")
-
-    def __init__(self, fieldtypes, *, default=None, conflicts=None):
-        if isinstance(fieldtypes, str):
-            fieldtypes = [fieldtypes]
-        self.fieldtypes = fieldtypes
-        self.fieldclasses = [self.field_class(t) for t in self.fieldtypes]
+    def __init__(self, fieldclasses, *, default=None, conflicts=None):
+        if not isinstance(fieldclasses, list):
+            fieldclasses = [fieldclasses]
+        for c in fieldclasses:
+            if c not in self.FIELD_CLASSES:
+                raise InvalidDefinitionError(f"Invalid field class '{c}'")
+        self.fieldclasses = set(fieldclasses)
         self.default = default
         self.conflicts = conflicts or []
+
+    @property
+    def fieldnames(self):
+        return [c.__name__ for c in self.fieldclasses]
 
     def convert(self, value):
         if value is None:
             return None
 
-        if set([bool]) == set(self.fieldclasses):
+        if set([bool]) == self.fieldclasses:
             with suppress(Exception):
                 value = str(value).strip().lower()
                 if value in ('true', 'yes', '1'):
@@ -286,11 +285,11 @@ class DefinitionField(object):
                 if value in ('false', 'no', '0'):
                     return False
 
-        if set([int]) == set(self.fieldclasses):
+        if set([int]) == self.fieldclasses:
             with suppress(Exception):
                 return int(value)
 
-        if set([str]) == set(self.fieldclasses):
+        if set([str]) == self.fieldclasses:
             if isinstance(value, bytes):
                 with suppress(Exception):
                     return value.decode()
@@ -298,7 +297,7 @@ class DefinitionField(object):
                 with suppress(Exception):
                     return str(value)
 
-        if set([bytes]) == set(self.fieldclasses):
+        if set([bytes]) == self.fieldclasses:
             if isinstance(value, str):
                 with suppress(Exception):
                     return value.encode()
@@ -313,8 +312,5 @@ class DefinitionField(object):
         return value
 
     def check(self, value):
-        if value is None:
-            return
-
-        if not isinstance(value, tuple(self.fieldclasses)):
-            raise InvalidDefinitionError(f"invalid {','.join(self.fieldtypes)} field: '{value}'")
+        if not isinstance(value, tuple(self.fieldclasses) + (None,)):
+            raise InvalidDefinitionError(f"invalid {','.join(self.fieldnames)} field: '{value}'")

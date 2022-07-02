@@ -23,7 +23,7 @@ class ComparisonAnalysis(Analysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'to': 'text',
+            'to': str,
         }
 
     @property
@@ -81,8 +81,8 @@ class TextComparisonAnalysis(ComparisonAnalysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'strip': 'bool',
-            'ignore_whitespace': 'bool',
+            'strip': bool,
+            'ignore_whitespace': bool,
         }
 
     @classmethod
@@ -167,12 +167,12 @@ class DictAnalysis(ComparisonAnalysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'fields': 'list',
-            'fields_from_source': 'bool',
-            'fields_from_to': 'bool',
-            'ignore_fields': 'list',
-            'ignore_missing': 'bool',
-            'to': 'dict',
+            'fields': list,
+            'fields_from_source': bool,
+            'fields_from_to': bool,
+            'ignore_fields': list,
+            'ignore_missing': bool,
+            'to': dict,
         }
 
     @classmethod
@@ -249,9 +249,9 @@ class IndirectDictAnalysis(DictAnalysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'fields_from_source': 'bool',
-            'fields_from_to': 'bool',
-            'to': 'text',
+            'fields_from_source': bool,
+            'fields_from_to': bool,
+            'to': str,
         }
 
     @classmethod
@@ -310,7 +310,7 @@ class DictFieldAnalysis(ComparisonAnalysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'field': 'text',
+            'field': str,
         }
 
     @property

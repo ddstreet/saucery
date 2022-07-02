@@ -30,8 +30,8 @@ class FileReference(Reference):
     @classmethod
     def _add_fields(cls):
         return {
-            'noglob': 'bool',
-            'source': ['text', 'list'],
+            'noglob': bool,
+            'source': [str, list],
         }
 
     @classmethod
@@ -76,7 +76,7 @@ class SubdirFileReference(FileReference):
     @classmethod
     def _add_fields(cls):
         return {
-            'subdir': 'text',
+            'subdir': str,
         }
 
     def _convert_source(self, source):
@@ -101,7 +101,7 @@ class CommandReference(FileReference):
     @classmethod
     def _add_fields(cls):
         return {
-            'command': 'text',
+            'command': str,
         }
 
     def file(self, source):

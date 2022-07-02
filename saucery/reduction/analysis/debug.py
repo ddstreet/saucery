@@ -22,7 +22,7 @@ class DebugAnalysis(Analysis):
     @classmethod
     def _add_fields(cls):
         return {
-            'level': 'text'
+            'level': str,
         }
 
     @classmethod

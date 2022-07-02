@@ -21,9 +21,9 @@ class RegexReference(ParseReference):
     @classmethod
     def _add_fields(cls):
         return {
-            'pattern': 'bytes',
-            'multiline': 'bool',
-            'ignorecase': 'bool',
+            'pattern': bytes,
+            'multiline': bool,
+            'ignorecase': bool,
         }
 
     @classmethod

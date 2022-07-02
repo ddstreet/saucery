@@ -30,7 +30,7 @@ class IniReference(ParseReference):
     @classmethod
     def _add_fields(cls):
         return {
-            'default_section': 'text',
+            'default_section': str,
         }
 
     @classmethod
@@ -111,7 +111,7 @@ class IniSectionReference(IniReference, DictReference):
     @classmethod
     def _add_fields(cls):
         return {
-            'section': 'text',
+            'section': str,
         }
 
     @property

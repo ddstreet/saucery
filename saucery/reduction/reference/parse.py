@@ -105,9 +105,9 @@ class ExecReference(TransformReference):
     @classmethod
     def _add_fields(cls):
         return {
-            'source': 'text',
-            'exec': 'text',
-            'params': ['text', 'list'],
+            'source': str,
+            'exec': str,
+            'params': [str, list],
         }
 
     @classmethod
@@ -160,9 +160,9 @@ class JqReference(ExecReference):
     @classmethod
     def _add_fields(cls):
         return {
-            'source': 'text',
-            'exec': 'text',
-            'jq': 'text',
+            'source': str,
+            'exec': str,
+            'jq': str,
         }
 
     @classmethod

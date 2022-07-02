@@ -24,7 +24,7 @@ class ChainReference(Reference):
     @classmethod
     def _add_fields(cls):
         return {
-            'chain': 'list',
+            'chain': list,
         }
 
     def setup(self):
