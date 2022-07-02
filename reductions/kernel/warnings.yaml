@@ -1,0 +1,4 @@
+- name: kernel_warnings
+  type: regex
+  source: dmesg
+  pattern: '^.+WARNING: CPU: .+$'

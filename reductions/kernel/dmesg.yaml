@@ -1,0 +1,4 @@
+- name: dmesg
+  type: command
+  command: kernel
+  source: dmesg

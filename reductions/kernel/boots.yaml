@@ -1,0 +1,4 @@
+- name: boots
+  type: regex
+  source: journal
+  pattern: '^.+ kernel: Linux version .+$'

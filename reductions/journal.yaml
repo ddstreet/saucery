@@ -1,0 +1,4 @@
+- name: journal
+  type: command
+  command: logs
+  source: journal
