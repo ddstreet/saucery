@@ -197,8 +197,8 @@ class DefinitionField(object):
     this field, or a list of possible types. The value must be one of
     the FIELD_TYPES keys.
 
-    If 'fieldtypes' is set to only 'bool' or only 'int', the value
-    will be coerced to a bool or int type value. If 'list' is one of the
+    If 'fieldtypes' is set to only one of 'bool', 'int', 'text', or 'bytes',
+    the value will be coerced to that type. If 'list' is one of the
     field types, the value will always be converted to a list.
 
     If 'default' is set, it will be used if this field is not set,
@@ -214,6 +214,7 @@ class DefinitionField(object):
         'int': int,
         'list': list,
         'text': str,
+        'bytes': bytes,
     }
 
     @classmethod
@@ -246,6 +247,22 @@ class DefinitionField(object):
         if set([int]) == set(self.fieldclasses):
             with suppress(Exception):
                 return int(value)
+
+        if set([str]) == set(self.fieldclasses):
+            if isinstance(value, bytes):
+                with suppress(Exception):
+                    return value.decode()
+            else:
+                with suppress(Exception):
+                    return str(value)
+
+        if set([bytes]) == set(self.fieldclasses):
+            if isinstance(value, str):
+                with suppress(Exception):
+                    return value.encode()
+            else:
+                with suppress(Exception):
+                    return bytes(value)
 
         if list in self.fieldclasses:
             if not isinstance(value, list):

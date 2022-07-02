@@ -22,7 +22,7 @@ class RegexReference(ParseReference):
 
     @classmethod
     def fields(cls):
-        return ChainMap({'pattern': cls._field('text'),
+        return ChainMap({'pattern': cls._field('bytes'),
                          'multiline': cls._field('bool', default=True),
                          'ignorecase': cls._field('bool', default=False)},
                         super().fields())
