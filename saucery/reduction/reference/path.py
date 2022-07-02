@@ -140,8 +140,6 @@ class ReferencePath(type(Path())):
 
 class ReferencePathList(Collection):
     def __init__(self, paths):
-        if any(map(lambda p: not isinstance(p, Path), paths)):
-            raise ValueError('ReferencePathList entries must be Path or ReferencePath objects.')
         self._paths = [p if isinstance(p, ReferencePath) else ReferencePath(p)
                        for p in paths]
 
@@ -191,7 +189,7 @@ class ReferencePathList(Collection):
 
         This returns our regex_iterator wrapped in a new ReferencePathList.
         '''
-        return ReferencePathList(self.regex_iterator(pattern))
+        return ReferencePathList(list(self.regex_iterator(pattern)))
 
     @property
     def value(self):
