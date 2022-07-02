@@ -94,7 +94,7 @@ class ReferencePath(type(Path())):
             yield ReferencePath(self, offset=pos, length=o - pos)
             pos = o
 
-    def regex_iterator(self, pattern):
+    def regex_iterator(self, pattern, flags=0):
         '''Iterate over our value, returning matches for the provided regex pattern.
 
         This returns an iterable of ReferencePath objects, which each represent a
@@ -108,7 +108,7 @@ class ReferencePath(type(Path())):
             pattern = pattern.encode(errors='replace')
         if not isinstance(pattern, bytes):
             raise ValueError(f'Requires str or bytes, not {type(pattern)}')
-        for match in re.finditer(pattern, self.value):
+        for match in re.finditer(pattern, self.value, flags=flags):
             matchlen = match.end() - match.start()
             if not matchlen:
                 continue
@@ -173,7 +173,7 @@ class ReferencePathList(Collection):
         '''
         return ReferencePathList(self.line_iterator)
 
-    def regex_iterator(self, pattern):
+    def regex_iterator(self, pattern, flags=0):
         '''Iterate over our value, returning matches for the provided regex pattern.
 
         This returns an iterable of ReferencePath objects, which each represent a
@@ -182,14 +182,14 @@ class ReferencePathList(Collection):
         This will *not* include any 'null' (0-length) matches.
         '''
         for referencepath in self._paths:
-            yield from referencepath.regex_iterator(pattern)
+            yield from referencepath.regex_iterator(pattern, flags=flags)
 
-    def regex_pathlist(self, pattern):
+    def regex_pathlist(self, pattern, flags=0):
         '''ReferencePathList of each match of our value for the pattern.
 
         This returns our regex_iterator wrapped in a new ReferencePathList.
         '''
-        return ReferencePathList(list(self.regex_iterator(pattern)))
+        return ReferencePathList(list(self.regex_iterator(pattern, flags=flags)))
 
     @property
     def value(self):
