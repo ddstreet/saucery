@@ -5,6 +5,7 @@ from .chain import * # noqa
 from .file import * # noqa
 from .dict import * # noqa
 from .parse import * # noqa
+from .regex import * # noqa
 
 from .reference import InvalidReferenceError
 from .reference import Reference
