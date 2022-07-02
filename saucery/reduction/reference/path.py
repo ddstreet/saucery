@@ -102,6 +102,12 @@ class ReferencePath(type(Path())):
 
         This will *not* include any 'null' (0-length) matches.
         '''
+        if pattern is None:
+            return
+        if isinstance(pattern, str):
+            pattern = pattern.encode(errors='replace')
+        if not isinstance(pattern, bytes):
+            raise ValueError(f'Requires str or bytes, not {type(pattern)}')
         for match in re.finditer(pattern, self.value):
             matchlen = match.end() - match.start()
             if not matchlen:
