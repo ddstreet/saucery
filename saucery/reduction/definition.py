@@ -60,7 +60,7 @@ class Definition(ABC, UserDict):
     def _add_fields(cls):
         '''Fields to add for this class.
 
-        Subclasses should NOT call super()!
+        Subclasses should provide ONLY the fields they want to add; do not call super().
         '''
         return {
             'name': str,
@@ -72,43 +72,59 @@ class Definition(ABC, UserDict):
     def _remove_fields(cls):
         '''Fields to remove for this class.
 
-        Subclasses should NOT call super()!
+        Subclasses should provide ONLY the field names they want to remove; do not call super().
         '''
         return None
 
     @classmethod
+    def _field_defaults(cls):
+        '''Field defaults for this class.
+
+        Subclasses should provide ONLY the defaults for the fields they add; do not call super().
+        '''
+        return None
+
+    @classmethod
+    def _field_conflicts(cls):
+        '''Field conflicts for this class.
+
+        Subclasses should provide ONLY the conflicts for the fields they add; do not call super().
+        '''
+        return None
+
+    CACHED_FIELDS = {}
+
+    @classmethod
     def _fields(cls):
+        if cls.CACHED_FIELDS.get(cls):
+            return cls.CACHED_FIELDS.get(cls)
+
         fields = {}
         for c in reversed(inspect.getmro(cls)):
             if not issubclass(c, Definition):
                 continue
-            with suppress(KeyError):
-                func = '_add_fields'
-                if not isinstance(c.__dict__[func], classmethod):
-                    raise cls.ERROR_CLASS(f'{c.__name__}.{func} must be a classmethod')
-                fields.update(getattr(c, func)() or {})
-            with suppress(KeyError):
-                func = '_remove_fields'
-                if not isinstance(c.__dict__[func], classmethod):
-                    raise cls.ERROR_CLASS(f'{c.__name__}.{func} must be a classmethod')
-                for f in getattr(c, func)() or []:
-                    fields.pop(f, None)
-        return fields
+            add = {}
+            defaults = {}
+            conflicts = {}
+            if '_field_defaults' in c.__dict__.keys():
+                defaults = c._field_defaults() or {}
+            if '_field_conflicts' in c.__dict__.keys():
+                conflicts = c._field_conflicts() or {}
+            if '_add_fields' in c.__dict__.keys():
+                add = c._add_fields() or {}
+                fields.update({k: {'fieldclasses': v,
+                                   'default': defaults.get(k),
+                                   'conflicts': conflicts.get(k)}
+                               for k, v in add.items()})
+            if '_remove_fields' in c.__dict__.keys():
+                for key in c._remove_fields() or []:
+                    fields.pop(key, None)
+        cls.CACHED_FIELDS[cls] = {k: DefinitionField(**v) for k, v in fields.items()}
+        return cls.CACHED_FIELDS[cls]
 
-    @classmethod
-    def _field_default(cls, field):
-        return None
-
-    @classmethod
-    def _field_conflicts(cls, field):
-        return None
-
-    @cached_property
+    @property
     def fields(self):
-        return {k: DefinitionField(v,
-                                   default=self._field_default(k),
-                                   conflicts=self._field_conflicts(k))
-                for k, v in self._fields().items()}
+        return self._fields()
 
     def __init__(self, definition, reductions, *, anonymous=False):
         '''Definition init.

@@ -27,11 +27,11 @@ class RegexReference(ParseReference):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'multiline': True,
             'ignorecase': False,
-        }.get(field, super()._field_default(field))
+        }
 
     @property
     def _pattern(self):

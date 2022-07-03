@@ -35,10 +35,10 @@ class FileReference(Reference):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'noglob': False,
-        }.get(field, super()._field_default(field))
+        }
 
     @cached_property
     def pathlist(self):

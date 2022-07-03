@@ -86,11 +86,11 @@ class TextComparisonAnalysis(ComparisonAnalysis):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'strip': True,
             'ignore_whitespace': True,
-        }.get(field, super()._field_default(field))
+        }
 
     @property
     def comparison_kwargs(self):
@@ -176,14 +176,14 @@ class DictAnalysis(ComparisonAnalysis):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'fields': [],
             'fields_from_source': False,
             'fields_from_to': True,
             'ignore_fields': [],
             'ignore_missing': False,
-        }.get(field, super()._field_default(field))
+        }
 
     @cached_property
     def comparison(self):
@@ -255,11 +255,11 @@ class IndirectDictAnalysis(DictAnalysis):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'fields_from_source': True,
             'fields_from_to': False,
-        }.get(field, super()._field_default(field))
+        }
 
     @property
     def comparison_b(self):

@@ -26,10 +26,10 @@ class DebugAnalysis(Analysis):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'level': 'debug',
-        }.get(field, super()._field_default(field))
+        }
 
     @property
     def default_description(self):

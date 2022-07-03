@@ -111,11 +111,11 @@ class ExecReference(TransformReference):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'source': '',
             'params': [],
-        }.get(field, super()._field_default(field))
+        }
 
     def setup(self):
         super().setup()
@@ -166,10 +166,10 @@ class JqReference(ExecReference):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'exec': 'jq',
-        }.get(field, super()._field_default(field))
+        }
 
     @property
     def exec_cmd(self):

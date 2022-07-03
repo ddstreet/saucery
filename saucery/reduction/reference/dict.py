@@ -34,10 +34,10 @@ class IniReference(ParseReference):
         }
 
     @classmethod
-    def _field_default(cls, field):
+    def _field_defaults(cls):
         return {
             'default_section': configparser.DEFAULTSECT,
-        }.get(field, super()._field_default(field))
+        }
 
     def setup(self):
         super().setup()
