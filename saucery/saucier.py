@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import logging
+import json
 import os
 
 from concurrent import futures
@@ -46,6 +47,14 @@ class Saucier(SauceryBase):
                 LOGGER.info(f'{index}{sos}{state}')
             else:
                 LOGGER.info(str(sos))
+
+    def print_analysis(self, sosreports):
+        for sos in self._sosreports(sosreports):
+            if sos.analysed:
+                LOGGER.debug(f'{sos}:')
+                LOGGER.info(json.dumps(sos.conclusions, indent=2))
+            else:
+                LOGGER.info(f'Not analysed: {sos}')
 
     def _parallel(self, sosreports, action, parallel=True):
         sosreports = self._sosreports(sosreports)
