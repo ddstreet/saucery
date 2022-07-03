@@ -439,4 +439,5 @@ def _SOSFilenamePattern():
     NAME = fr'(?P<name>sosreport-{HOSTNAME}(?:-{CASE}-{DATE}-{HASH})?)'
     return re.compile(fr'(?i){NAME}\.{EXT}')
 
+
 SOSFilenamePattern = _SOSFilenamePattern()
