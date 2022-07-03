@@ -37,9 +37,9 @@ class DebugAnalysis(Analysis):
 
     @property
     def _results(self):
-        if self.source_value() is None:
+        if self.source.value is None:
             return None
-        return [self.source_value()]
+        return [self.source.value]
 
     @property
     def _normal(self):

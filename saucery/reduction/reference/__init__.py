@@ -9,9 +9,11 @@ from .regex import * # noqa
 
 from .reference import InvalidReferenceError
 from .reference import Reference
+from .reference import ReferenceSourceDefinition
 
 
 __all__ = [
     'InvalidReferenceError',
     'Reference',
+    'ReferenceSourceDefinition',
 ]

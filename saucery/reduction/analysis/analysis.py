@@ -3,17 +3,16 @@ from abc import abstractmethod
 from datetime import datetime
 from functools import cached_property
 
-from ..definition import Definition
-from ..definition import InvalidDefinitionError
-
 from .conclusion import Conclusion
+from ..definition import InvalidDefinitionError
+from ..reference import ReferenceSourceDefinition
 
 
 class InvalidAnalysisError(InvalidDefinitionError):
     pass
 
 
-class Analysis(Definition):
+class Analysis(ReferenceSourceDefinition):
     '''Analysis class.
 
     This represents an analysis of reference(s).
@@ -98,17 +97,6 @@ class Analysis(Definition):
         if self.results is None:
             return None
         return not self.results
-
-    @property
-    def source_reference(self):
-        return self.reductions.reference(self.source)
-
-    @property
-    def source_value(self):
-        ref = self.source_reference
-        if ref is None:
-            return None
-        return ref.value
 
 
 class BasicAnalysis(Analysis):

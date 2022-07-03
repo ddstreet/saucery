@@ -33,7 +33,7 @@ class ComparisonAnalysis(Analysis):
 
     @property
     def comparison_a(self):
-        return self.source_value()
+        return self.source.value
 
     @property
     def comparison_b(self):
@@ -63,7 +63,7 @@ class ComparisonAnalysis(Analysis):
 class IndirectComparisonAnalysis(ComparisonAnalysis):
     @property
     def comparison_b(self):
-        return self.source_value(self.get('to'))
+        return getattr(self.reductions.analysis(self.get('to')), 'value', None)
 
 
 class TextComparisonAnalysis(ComparisonAnalysis):

@@ -42,11 +42,19 @@ class Reference(Definition):
         return self.pathlist.length
 
 
-class ReferenceSourceReference(Reference, DefinitionSourceDefinition):
-    '''ReferenceSourceReference class.
+class ReferenceSourceDefinition(DefinitionSourceDefinition):
+    '''ReferenceSourceDefinition class.
 
-    This represents a reference, where the 'source' is another Reference.
+    This represents a definition, where the 'source' is a Reference.
     '''
     @property
     def source_class(self):
         return Reference
+
+
+class ReferenceSourceReference(Reference, ReferenceSourceDefinition):
+    '''ReferenceSourceReference class.
+
+    This represents a reference, where the 'source' is a Reference.
+    '''
+    pass
