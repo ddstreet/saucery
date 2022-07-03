@@ -29,18 +29,14 @@ class Saucier(SauceryBase):
         return self.saucery.sosreport(name)
 
     def _sosreports(self, sosreports):
-        soses = []
-        for s in sosreports:
+        for s in sosreports or self.sosreports:
             try:
-                soses.append(self.sosreport(s))
+                yield self.sosreport(s)
             except ValueError as e:
                 LOGGER.info(e)
-        return soses
 
     def print_sosreports(self, sosreports):
-        if not sosreports:
-            sosreports = self.sosreports
-        for sos in map(self.sosreport, sosreports):
+        for sos in self._sosreports(sosreports):
             if LOGGER.isEnabledFor(logging.DEBUG):
                 states = ['invalid', 'extracted', 'squashed', 'mounted', 'analysed']
                 state = ','.join([s for s in states if getattr(sos, s, False)])
