@@ -15,14 +15,18 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Saucier(SauceryBase):
-    def sosreport(self, name):
-        if isinstance(name, SOS):
-            return name
-        return self.saucery.sosreport(Path(name).name)
-
     @property
     def sosreports(self):
         return self.saucery.sosreports
+
+    def sosreport(self, name):
+        if isinstance(name, str) and not SOS.valid_filename(name):
+            # See if we match an existing sosreport name (without the suffix)
+            basename = Path(name).name
+            for s in self.saucery.sosreports:
+                if basename == s.name:
+                    return s
+        return self.saucery.sosreport(name)
 
     def _sosreports(self, sosreports):
         soses = []
