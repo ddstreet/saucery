@@ -158,7 +158,8 @@ class Definition(ABC, UserDict):
 
     @property
     def json(self):
-        return json.dumps(self.data)
+        return json.dumps(self.data,
+                          cls=DefinitionJSONEncoder)
 
     @property
     def yaml(self):
@@ -330,3 +331,10 @@ class DefinitionField(object):
     def check(self, value):
         if not isinstance(value, tuple(self.fieldclasses) + (None,)):
             raise InvalidDefinitionError(f"invalid {','.join(self.fieldnames)} field: '{value}'")
+
+
+class DefinitionJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, bytes):
+            return o.decode()
+        return super().default(o)
