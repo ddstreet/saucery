@@ -29,16 +29,20 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SOS(SauceryBase):
-    FILENAME_REGEX = re.compile(r'(?i)'
-                                r'(?P<name>sosreport-(?P<hostname>.+?)(?:-(?P<case>\d+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<hash>\w{7}))?)' # noqa
-                                r'\.(?P<ext>tar(?:\.(?P<compression>(xz|gz|bz2)))?)$')
+    @classmethod
+    def match_filename(cls, filename):
+        return SOSFilenamePattern.match(filename)
+
+    @classmethod
+    def valid_filename(cls, filename):
+        return cls.match_filename(filename) is not None
 
     def __init__(self, *args, sosreport, **kwargs):
         super().__init__(*args, **kwargs)
         self._sosreport = sosreport
 
         # Require sanely named sosreport
-        self._sosreport_match = self.FILENAME_REGEX.match(self.sosreport.name)
+        self._sosreport_match = self.match_filename(self.sosreport.name)
         if not self._sosreport_match:
             raise ValueError(f"Invalid sosreport name '{self.sosreport.name}'")
 
@@ -422,3 +426,17 @@ class SOS(SauceryBase):
 
         self.conclusions = a.conclusions
         self.analysed = True
+
+
+def _SOSFilenamePattern():
+    # The parts are separated to attempt making it easier to understand the full regex pattern
+    COMPRESSION = r'(?P<compression>(xz|gz|bz2))'
+    EXT = fr'(?P<ext>tar(?:\.{COMPRESSION})?)'
+    HASH = r'(?P<hash>\w{7})'
+    DATE = r'(?P<date>\d{4}-\d{2}-\d{2})'
+    CASE = r'(?P<case>\d+)'
+    HOSTNAME = r'(?P<hostname>.+?)'
+    NAME = fr'(?P<name>sosreport-{HOSTNAME}(?:-{CASE}-{DATE}-{HASH})?)'
+    return re.compile(fr'(?i){NAME}\.{EXT}')
+
+SOSFilenamePattern = _SOSFilenamePattern()

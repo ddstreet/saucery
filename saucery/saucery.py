@@ -54,7 +54,7 @@ class Saucery(SauceryBase):
     def sosreports(self):
         return [self.sosreport(s)
                 for s in self.sosdir.iterdir()
-                if s.is_file() and SOS.FILENAME_REGEX.match(s.name)]
+                if s.is_file() and SOS.valid_filename(s.name)]
 
     def _sosreport_path(self, sosreport):
         if isinstance(sosreport, SOS):
