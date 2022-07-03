@@ -21,6 +21,10 @@ class Analysis(ReferenceSourceDefinition):
     VALID_LEVELS = ('critical', 'error', 'warning', 'info', 'debug')
 
     @classmethod
+    def TYPE(cls):
+        return 'analysis'
+
+    @classmethod
     def _add_fields(cls):
         return {
             'level': str,
@@ -58,9 +62,8 @@ class Analysis(ReferenceSourceDefinition):
         return self._duration
 
     @property
-    @abstractmethod
     def _results(self):
-        pass
+        return getattr(self.source, 'value', None)
 
     @cached_property
     def results(self):
@@ -89,13 +92,3 @@ class Analysis(ReferenceSourceDefinition):
         if self.results is None:
             return None
         return not self.results
-
-
-class BasicAnalysis(Analysis):
-    @classmethod
-    def TYPE(cls):
-        return 'analysis'
-
-    @property
-    def _results(self):
-        return self.source_value
