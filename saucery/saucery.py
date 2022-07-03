@@ -52,9 +52,10 @@ class Saucery(SauceryBase):
 
     @property
     def sosreports(self):
-        return [self.sosreport(s)
-                for s in self.sosdir.iterdir()
-                if s.is_file() and SOS.valid_filename(s.name)]
+        return sorted([self.sosreport(s)
+                       for s in self.sosdir.iterdir()
+                       if s.is_file() and SOS.valid_filename(s.name)],
+                      key=lambda s: s.name)
 
     def _sosreport_path(self, sosreport):
         if isinstance(sosreport, SOS):
