@@ -18,8 +18,8 @@ class Conclusion(Mapping):
         return {
             'name': self.analysis.get('name'),
             'level': self.analysis.level,
-            'summary': self.analysis.summary,
-            'description': self.analysis.description,
+            'summary': self.analysis.get('summary'),
+            'description': self.analysis.get('description'),
             'results': self.analysis.results,
             'duration': self.analysis.duration.total_seconds(),
             'normal': self.normal,

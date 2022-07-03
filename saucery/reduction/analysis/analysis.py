@@ -49,14 +49,6 @@ class Analysis(ReferenceSourceDefinition):
         return level
 
     @property
-    def summary(self):
-        return self.get('summary')
-
-    @property
-    def description(self):
-        return self.get('description')
-
-    @property
     def conclusion(self):
         return Conclusion(self)
 
