@@ -38,13 +38,14 @@ class Saucier(SauceryBase):
     def print_sosreports(self, sosreports):
         for sos in self._sosreports(sosreports):
             if LOGGER.isEnabledFor(logging.DEBUG):
+                index = f'{self.saucery.sosreport_index(sos)}: '
                 states = ['invalid', 'extracted', 'squashed', 'mounted', 'analysed']
                 state = ','.join([s for s in states if getattr(sos, s, False)])
+                if state:
+                    state = f' ({state})'
+                LOGGER.info(f'{index}{sos}{state}')
             else:
-                state = ''
-            if state:
-                state = f' ({state})'
-            LOGGER.info(f'{sos}{state}')
+                LOGGER.info(str(sos))
 
     def _parallel(self, sosreports, action, parallel=True):
         sosreports = self._sosreports(sosreports)
