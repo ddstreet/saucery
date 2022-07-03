@@ -6,6 +6,8 @@ import os
 
 from collections import ChainMap
 from functools import cached_property
+from functools import lru_cache
+from functools import singledispatchmethod
 from pathlib import Path
 
 from .base import SauceryBase
@@ -44,7 +46,7 @@ class Saucery(SauceryBase):
         if not path.is_dir():
             if not self.dry_run:
                 path.mkdir()
-        return path
+        return path.resolve()
 
     @property
     def menu(self):
@@ -57,19 +59,29 @@ class Saucery(SauceryBase):
                        if s.is_file() and SOS.valid_filename(s.name)],
                       key=lambda s: s.name)
 
-    def _sosreport_path(self, sosreport):
-        if isinstance(sosreport, SOS):
-            return sosreport.sosreport
-        return self.sosdir / sosreport
-
+    @singledispatchmethod
     def sosreport(self, sosreport):
-        path = self._sosreport_path(sosreport)
-        if not str(path.resolve()).startswith(str(self.sosdir.resolve())):
+        raise ValueError(f"Can't lookup sosreport from type '{type(sosreport)}'")
+
+    @sosreport.register
+    def _(self, sosreport: SOS):
+        return sosreport
+
+    @sosreport.register
+    def _(self, sosreport: str):
+        return self.sosreport(Path(sosreport))
+
+    @sosreport.register
+    def _(self, sosreport: Path):
+        path = str(self.sosdir.joinpath(sosreport).resolve())
+        if not path.startswith(str(self.sosdir)):
             raise ValueError(f'Sosreports must be located under {self.sosdir}: '
                              f'invalid location {path}')
 
-        if isinstance(sosreport, SOS):
-            return sosreport
+        return self._sos(path)
+
+    @lru_cache(maxsize=None)
+    def _sos(self, path):
         return SOS(instance=self, sosreport=path)
 
     def update_menu(self):
