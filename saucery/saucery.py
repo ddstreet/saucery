@@ -59,6 +59,12 @@ class Saucery(SauceryBase):
                        if s.is_file() and SOS.valid_filename(s.name)],
                       key=lambda s: s.name)
 
+    def sosreport_index(self, sosreport):
+        sosreports = self.sosreports
+        if sosreport in sosreports:
+            return sosreports.index(sosreport)
+        return None
+
     @singledispatchmethod
     def sosreport(self, sosreport):
         raise ValueError(f"Can't lookup sosreport from type '{type(sosreport)}'")
@@ -69,7 +75,20 @@ class Saucery(SauceryBase):
 
     @sosreport.register
     def _(self, sosreport: str):
+        try:
+            index = int(sosreport)
+        except ValueError:
+            pass
+        else:
+            return self.sosreport(index)
         return self.sosreport(Path(sosreport))
+
+    @sosreport.register
+    def _(self, sosreport: int):
+        try:
+            return self.sosreports[sosreport]
+        except IndexError:
+            raise ValueError(f'No sosreport found for index {sosreport}')
 
     @sosreport.register
     def _(self, sosreport: Path):
