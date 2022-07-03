@@ -21,6 +21,8 @@ def main():
                         default=0, type=int,
                         help='Run actions in this many threads (0: #cpus, default: 0)')
 
+    parser.add_argument('-a', '--show-analysis', action='store_true',
+                        help='Show the analysis results')
     parser.add_argument('-E', '--extract', action='store_true',
                         help='Extract the sosreport')
     parser.add_argument('-S', '--squash', action='store_true',
@@ -34,7 +36,9 @@ def main():
     parser.add_argument('-U', '--menu', action='store_true',
                         help='Update the menu with current sosreports')
     parser.add_argument('--umount', action='store_true', dest='unmount', help=argparse.SUPPRESS)
-    parser.action_attrs.extend(['extract', 'squash', 'mount', 'analyse', 'menu', 'unmount'])
+    parser.action_attrs.extend(['show_analysis',
+                                'extract', 'squash', 'analyse', 'menu',
+                                'mount', 'unmount'])
 
     parser.add_argument('sosreport', nargs='*', default=[],
                         help='Act on specific sosreports (implies --force)')
@@ -61,6 +65,8 @@ def main():
                             mount=opts.mount,
                             analyse=opts.analyse,
                             update_menu=opts.menu)
+            if opts.show_analysis:
+                saucier.print_analysis(sosreports)
         finally:
             if opts.unmount:
                 saucier.unmount(sosreports)
