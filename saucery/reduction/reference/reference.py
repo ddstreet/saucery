@@ -36,11 +36,6 @@ class Reference(Definition):
         '''
         return self.pathlist.value
 
-    @property
-    def size(self):
-        '''The size of this reference value.'''
-        return self.pathlist.length
-
 
 class ReferenceSourceDefinition(DefinitionSourceDefinition):
     '''ReferenceSourceDefinition class.
