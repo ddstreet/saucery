@@ -81,7 +81,7 @@ class TransformReference(ParseReference):
 
         self.sos.analysis_files[name] = self.transform(value)
 
-        return ReferencePathList([self.sos.analysis_files.path(name)])
+        return ReferencePathList([self.sos.analysis_files.path(name)], sos=self.sos)
 
 
 class ExecReference(TransformReference):

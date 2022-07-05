@@ -46,7 +46,7 @@ class FileReference(Reference):
             sources = [self.file(s) for s in self.source]
         else:
             sources = list(chain(*(self.fileglob(s) for s in self.source)))
-        return ReferencePathList([s for s in sources if s])
+        return ReferencePathList([s for s in sources if s], sos=self.sos)
 
     def _convert_source(self, source):
         return source

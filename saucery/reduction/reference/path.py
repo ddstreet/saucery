@@ -17,19 +17,34 @@ LOGGER = logging.getLogger(__name__)
 
 class ReferencePath(type(Path())):
     @staticmethod
-    def __new__(cls, *args, offset=0, length=0, **kwargs):
+    def __new__(cls, *args, sos=None, offset=0, length=0, **kwargs):
         '''The Path class doesn't handle __init__() correctly, so we need this hackery.
 
         https://github.com/python/cpython/issues/68320
         '''
         self = super().__new__(cls, *args, **kwargs)
 
+        self._sos = sos
         self._offset = max(0, offset)
         self._length = max(0, length)
 
         self._ref = args[0] if args and isinstance(args[0], ReferencePath) else None
 
+        if not self._ref and not self._sos:
+            raise ValueError('ReferencePath requires SOS')
+
+        # Raise ValueError if not inside our sos
+        self.sospath
+
         return self
+
+    @property
+    def sos(self):
+        return self._sos or self._ref._sos
+
+    @property
+    def sospath(self):
+        return self.relative_to(self.sos.workdir)
 
     @property
     def offset(self):
@@ -139,8 +154,8 @@ class ReferencePath(type(Path())):
 
 
 class ReferencePathList(Collection):
-    def __init__(self, paths):
-        self._paths = [p if isinstance(p, ReferencePath) else ReferencePath(p)
+    def __init__(self, paths, sos=None):
+        self._paths = [p if isinstance(p, ReferencePath) else ReferencePath(p, sos=sos)
                        for p in paths]
 
     def __contains__(self, item):
