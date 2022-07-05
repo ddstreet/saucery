@@ -10,15 +10,15 @@
   source: hotsos.json
   type: jq
   jq: '[.[]."bugs-detected"|select(.)|.[].desc]|flatten'
-- description: Hotsos Potential Issues
-  level: error
+- description: HotSOS detected these potential issues
+  level: warning
   name: hotsos-issue-analysis
   source: hotsos-potential-issues
-  summary: List of HotSOS potential issues
+  summary: HotSOS Potential Issues
   type: analysis
-- description: Hotsos Bugs Detected
-  level: warning
+- description: HotSOS detected these known bugs
+  level: error
   name: hotsos-bugs-analysis
   source: hotsos-bugs-detected
-  summary: List of HotSOS bugs detected
+  summary: HotSOS Bugs Detected
   type: analysis

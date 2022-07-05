@@ -1,4 +1,10 @@
-- name: kernel_warnings
+- name: dmesg_kernel_warnings
   type: regex
   source: dmesg
   pattern: '^.+WARNING: CPU: .+$'
+- name: kernel_warnings
+  level: warning
+  summary: Kernel WARNING messages
+  description: Kernel warning messages detected, these may indicate serious problems
+  type: analysis
+  source: dmesg_kernel_warnings

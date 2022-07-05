@@ -2,3 +2,8 @@
   type: regex
   source: journal
   pattern: '^.+ kernel: Linux version .+$'
+- name: system_boots
+  summary: System Boots
+  description: List of system boots
+  type: analysis
+  source: boots
