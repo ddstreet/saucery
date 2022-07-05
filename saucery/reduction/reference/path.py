@@ -210,11 +210,14 @@ class ReferencePathList(Collection):
     def value(self):
         '''The concatenated value of all ReferencePath objects.
 
-        If all our objects have None value, return None.
+        If we have no objects, return an empty bytes.
+
+        If we have at least one object and all our objects' value is None, return None.
+
         Otherwise, return the concatenated value of all our objects' value as bytes.
         '''
         values = [p.value for p in self._paths if p.value is not None]
-        if not values:
+        if not values and self._paths:
             return None
         return b''.join(values)
 
