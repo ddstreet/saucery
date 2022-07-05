@@ -204,7 +204,7 @@ class ReferencePathList(Collection):
 
         This returns our regex_iterator wrapped in a new ReferencePathList.
         '''
-        return ReferencePathList(list(self.regex_iterator(pattern, flags=flags)))
+        return ReferencePathList(self.regex_iterator(pattern, flags=flags))
 
     @property
     def value(self):
@@ -234,7 +234,7 @@ class ReferencePathList(Collection):
                 break
 
     def slice(self, offset, length=0):
-        return ReferencePathList(list(self._range(offset, length)))
+        return ReferencePathList(list(self._slice(offset, length)))
 
 
 class ReferencePathDict(ReferencePathList, Mapping):
