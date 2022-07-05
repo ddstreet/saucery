@@ -97,7 +97,11 @@ class SOS(SauceryBase):
         return DirDict(self.workdir / 'analysis_files')
 
     def under_filesdir(self, path):
-        return str(Path(path).resolve()).startswith(str(self.filesdir.resolve()))
+        try:
+            Path(path).resolve().relative_to(self.filesdir.resolve())
+            return True
+        except ValueError:
+            return False
 
     def commanddir(self, command):
         if '/' in str(command):
