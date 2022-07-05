@@ -57,7 +57,7 @@ class Saucier(SauceryBase):
                 LOGGER.info(f'Not analysed: {sos}')
 
     def _parallel(self, sosreports, action, parallel=True):
-        sosreports = self._sosreports(sosreports)
+        sosreports = list(self._sosreports(sosreports))
 
         if not parallel:
             for s in sosreports:
