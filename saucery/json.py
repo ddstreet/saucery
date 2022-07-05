@@ -1,7 +1,7 @@
 
 import json as _json_
 
-from json import *
+from json import * # noqa
 from pathlib import Path
 
 

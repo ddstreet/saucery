@@ -2,7 +2,6 @@
 import logging
 import subprocess
 
-from contextlib import suppress
 from functools import cached_property
 
 
@@ -40,7 +39,7 @@ class SOSAnalysis(object):
         LOGGER.debug(f'Getting conclusion for {analysis_name}: {self.name}')
         try:
             return analysis.conclusion
-        except Exception as e:
+        except Exception:
             LOGGER.exception(f'Analysis {analysis_name} failed, skipping')
             return None
 

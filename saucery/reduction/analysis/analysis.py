@@ -1,5 +1,4 @@
 
-from datetime import datetime
 from functools import cached_property
 
 from ..definition import InvalidDefinitionError
