@@ -46,6 +46,22 @@ class ReferenceSourceDefinition(DefinitionSourceDefinition):
     def source_class(self):
         return Reference
 
+    @property
+    def source_pathlist(self):
+        '''The source.pathlist.
+
+        Returns None if our source is None, otherwise returns source.pathlist.
+        '''
+        return self.source.pathlist if self.source else None
+
+    @property
+    def source_value(self):
+        '''The source.value.
+
+        Returns None if our source is None, otherwise returns source.value.
+        '''
+        return self.source.value if self.source else None
+
 
 class ReferenceSourceReference(Reference, ReferenceSourceDefinition):
     '''ReferenceSourceReference class.

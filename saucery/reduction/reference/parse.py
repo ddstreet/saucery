@@ -44,12 +44,10 @@ class ParseReference(ReferenceSourceReference):
 
     @cached_property
     def pathlist(self):
-        pathlist = getattr(self.source, 'pathlist', None)
-        if not self.parse_none_value:
-            if pathlist is None or pathlist.value is None:
-                return None
+        if not self.parse_none_value and self.source_value is None:
+            return None
 
-        return self.parse(pathlist)
+        return self.parse(self.source_pathlist)
 
 
 class TransformReference(ParseReference):
@@ -73,7 +71,7 @@ class TransformReference(ParseReference):
         pass
 
     def parse(self, pathlist):
-        value = getattr(pathlist, 'value', None)
+        value = pathlist.value if pathlist else None
         if not self.parse_none_value and value is None:
             return None
 
@@ -198,4 +196,4 @@ class DictReference(ParseReference):
 
     @property
     def pathlist(self):
-        return getattr(self.pathdict, 'pathlist', None)
+        return self.pathdict.pathlist if self.pathdict else None
