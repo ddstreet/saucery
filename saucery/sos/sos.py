@@ -182,11 +182,11 @@ class SOS(SauceryBase):
     def json(self):
         LOGGER.debug(f'Generating JSON for {self.name}')
 
-        conclusions = {level: len(list(chain(*[c.get('results') for c in self.conclusions
-                                               if c.get('abnormal') and c.get('level') == level])))
+        conclusions = {level: len([c for c in self.conclusions
+                                   if c.get('abnormal') and c.get('level') == level])
                        for level in Analysis.VALID_LEVELS}
 
-        result = {
+        return {
             'name': self.name,
             'sosreport': self.sosreport.name,
             'datetime': self.isodate,
@@ -194,10 +194,8 @@ class SOS(SauceryBase):
             'machineid': self.machineid,
             'case': self.case,
             'customer': self.customer,
+            'conclusions' = conclusions,
         }
-        if self.conclusions:
-            result['conclusions'] = conclusions
-        return result
 
     invalid = FileProperty('invalid', bool)
     extracted = FileProperty('extracted', bool)
