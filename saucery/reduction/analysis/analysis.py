@@ -2,9 +2,10 @@
 from datetime import datetime
 from functools import cached_property
 
-from .conclusion import Conclusion
 from ..definition import InvalidDefinitionError
 from ..reference import ReferenceSourceDefinition
+
+from .path import ReferencePathListResult
 
 
 class InvalidAnalysisError(InvalidDefinitionError):
@@ -52,42 +53,24 @@ class Analysis(ReferenceSourceDefinition):
         return level
 
     @property
-    def conclusion(self):
-        return Conclusion(self)
-
-    @property
-    def duration(self):
-        self.results
-        return self._duration
-
-    @property
-    def _results(self):
-        return getattr(self.source, 'value', None)
-
-    @cached_property
     def results(self):
-        '''Analysis results description.
+        '''The results of our analysis.
 
-        Returns None if no analysis could be performed, otherwise returns a list
-        of strings describing the results of the analysis.
-
-        Subclasses should not override this, but instead should implement _results
-        so this class can generate the analysis duration.
+        The default implementation here returns a new ReferencePathListResult object
+        from our source pathlist.
         '''
-        start = datetime.now()
-        try:
-            return self._results
-        finally:
-            self._duration = datetime.now() - start
+        return ReferencePathListResult(self.source_pathlist)
 
     @property
-    def normal(self):
-        '''If the analysis results are normal.
-
-        Returns None if no analysis could be performed, otherwise returns True
-        if the analysis results are 'normal' (False), and False if the analysis
-        results are not 'normal' (True).
-        '''
-        if self.results is None:
-            return None
-        return not self.results
+    def conclusion(self):
+        '''The conclusion for this analysis.'''
+        return {
+            'name': self.get('name'),
+            'level': self.level,
+            'summary': self.get('summary'),
+            'description': self.get('description'),
+            'normal': self.results.normal,
+            'abnormal': self.results.abnormal,
+            'unknown': self.results.unknown,
+            'details': self.results.details,
+        }

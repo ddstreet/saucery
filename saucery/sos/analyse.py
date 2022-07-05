@@ -38,10 +38,11 @@ class SOSAnalysis(object):
     def _get_conclusion(self, analysis):
         analysis_name = analysis.get('name')
         LOGGER.debug(f'Getting conclusion for {analysis_name}: {self.name}')
-        with suppress(Exception):
-            return dict(analysis.conclusion)
-        LOGGER.exception(f'Analysis {analysis.name} failed, skipping')
-        return None
+        try:
+            return analysis.conclusion
+        except Exception as e:
+            LOGGER.exception(f'Analysis {analysis_name} failed, skipping')
+            return None
 
     @cached_property
     def conclusions(self):
