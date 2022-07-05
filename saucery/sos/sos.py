@@ -194,7 +194,7 @@ class SOS(SauceryBase):
             'machineid': self.machineid,
             'case': self.case,
             'customer': self.customer,
-            'conclusions' = conclusions,
+            'conclusions': conclusions,
         }
 
     invalid = FileProperty('invalid', bool)
