@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
-import json
-
 from collections.abc import MutableMapping
 from contextlib import suppress
 from pathlib import Path
+
+from .. import json
 
 
 class FileProperty(property):

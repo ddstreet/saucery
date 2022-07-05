@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import json
 import logging
 import os
 
@@ -10,6 +9,7 @@ from functools import lru_cache
 from functools import singledispatchmethod
 from pathlib import Path
 
+from . import json
 from .base import SauceryBase
 from .sos import SOS
 

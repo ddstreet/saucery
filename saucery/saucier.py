@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
 import logging
-import json
 import os
 
 from concurrent import futures
 from functools import partial
 from pathlib import Path
 
+from . import json
 from .base import SauceryBase
 from .sos import SOS
 

@@ -1,5 +1,4 @@
 
-import json
 import logging
 import yaml
 
@@ -7,6 +6,8 @@ from collections import ChainMap
 from collections import UserDict
 from contextlib import suppress
 from pathlib import Path
+
+from .. import json
 
 from .analysis import Analysis
 from .definition import InvalidDefinitionError

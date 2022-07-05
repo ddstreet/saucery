@@ -1,6 +1,5 @@
 
 import inspect
-import json
 import uuid
 import yaml
 
@@ -9,6 +8,8 @@ from abc import abstractmethod
 from collections import UserDict
 from contextlib import suppress
 from functools import cached_property
+
+from .. import json
 
 
 class InvalidDefinitionError(Exception):
@@ -158,8 +159,7 @@ class Definition(ABC, UserDict):
 
     @property
     def json(self):
-        return json.dumps(self.data,
-                          cls=DefinitionJSONEncoder)
+        return json.dumps(self.data)
 
     @property
     def yaml(self):
@@ -331,10 +331,3 @@ class DefinitionField(object):
     def check(self, value):
         if not isinstance(value, tuple(self.fieldclasses) + (None,)):
             raise InvalidDefinitionError(f"invalid {','.join(self.fieldnames)} field: '{value}'")
-
-
-class DefinitionJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, bytes):
-            return o.decode()
-        return super().default(o)
