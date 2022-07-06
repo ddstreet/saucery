@@ -146,6 +146,8 @@ class SOSExtraction(object):
             'type': 'file',
             'size': output.stat().st_size,
         }
+        line_offsets = PathLineOffsets(output)
+        line_offsets.write_text(','.join(map(str, line_offsets.detect_offsets())))
         return True
 
     def _remove_journal(self, dest):
