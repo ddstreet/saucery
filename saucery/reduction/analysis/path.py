@@ -15,6 +15,8 @@ class ReferencePathListResult(object):
                 'path': path.sospath,
                 'offset': path.offset,
                 'length': path.length,
+                'first_line': path.first_line_number,
+                'last_line': path.last_line_number,
             },
         }
 
