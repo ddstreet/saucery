@@ -10,11 +10,15 @@ var SauceryServiceValue = SauceryPathEntries[2];
 // service path, i.e. any path after key; used mostly for 'sos', e.g. /files/...
 var SauceryServicePathEntries = SauceryPathEntries.slice(3).filter(p => p);
 var SauceryServicePath = SauceryServicePathEntries.join('/');
+// relative path back to our SauceryServicePath dir
+var SauceryServicePathRoot = '../'.repeat(SauceryServicePathEntries.length);
 // service sub-value, e.g. 'files' for sos-*/files/
 var SaucerySubServiceValue = SauceryServicePathEntries[0];
 // service sub-path, e.g. path after key/files/
 var SaucerySubServicePathEntries = SauceryServicePathEntries.slice(1);
 var SaucerySubServicePath = SaucerySubServicePathEntries.join('/');
+// relative path back to our SaucerySubServicePath dir
+var SaucerySubServicePathRoot = '../'.repeat(SaucerySubServicePathEntries.length);
 
 var SauceryMenu = [];
 var SauceryMenuLoaded = $.getJSON('/menu.json', data => SauceryMenu = data);

@@ -16,7 +16,7 @@
 
     <script src="/saucery.js"></script>
     <script src="/dirtree.js"></script>
-    <script src="/jsontree.js"></script>
+    <script src="/analysistree.js"></script>
     <link rel="stylesheet" type="text/css" href="/saucery.css"/>
 
     <script type='text/javascript'>
@@ -24,8 +24,8 @@
 
       $(function () {
           let json = '../'.repeat(SauceryServicePathEntries.filter(p => p).length) + 'conclusions';
-          $('div.JsonTree').attr('saucery-tree-json', json);
-          JsonTree();
+          $('div.AnalysisTree').attr('saucery-tree-json', json);
+          AnalysisTree();
           DirTree();
       });
     </script>
@@ -37,9 +37,7 @@
     <div class='case'>Case: </div>
     <div class='customer'>Customer: </div>
     <hr>
-    <div class='JsonTree' saucery-tree-name='Analysis'></div>
-    <hr>
-    <div class='DirTree' saucery-tree-name='External Analysis' saucery-tree-href='external_analysis'></div>
+    <div class='AnalysisTree' saucery-tree-name='Analysis'></div>
     <hr>
     <div class='DirTree' saucery-tree-name='Files' saucery-tree-href='files'></div>
   </body>
