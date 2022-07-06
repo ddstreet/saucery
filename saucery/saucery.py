@@ -4,6 +4,7 @@ import logging
 import os
 
 from collections import ChainMap
+from contextlib import suppress
 from functools import cached_property
 from functools import lru_cache
 from functools import singledispatchmethod
@@ -52,12 +53,20 @@ class Saucery(SauceryBase):
     def menu(self):
         return self.saucerydir / 'menu.json'
 
-    @property
-    def sosreports(self):
+    @cached_property
+    def _sosreports(self):
+        self._sosdir_mtime = self.sosdir.stat().st_mtime
         return sorted([self.sosreport(s)
                        for s in self.sosdir.iterdir()
                        if s.is_file() and SOS.valid_filename(s.name)],
                       key=lambda s: s.name)
+
+    @property
+    def sosreports(self):
+        if getattr(self, '_sosdir_mtime', None) != self.sosdir.stat().st_mtime:
+            with suppress(AttributeError):
+                del self._sosreports
+        return self._sosreports
 
     def sosreport_index(self, sosreport):
         sosreports = self.sosreports
