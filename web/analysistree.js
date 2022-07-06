@@ -4,19 +4,26 @@ function AnalysisTree() {
         let t = $(this);
         let name = t.attr('saucery-tree-name');
         let json = t.attr('saucery-tree-json');
-        let parent = t;
-        if (name) {
-            let ul = $('<ul>').appendTo(t);
-            let li = $('<li>').appendTo(ul);
-            $('<a>').text(name).appendTo(li);
-            parent = li;
-        }
+        if (!name || !json)
+            return;
 
-        $.getJSON(json, {format: 'raw'}, (data => PopulateAnalysisTree(t, parent, data)));
+        $('<h3>').text(name).appendTo(t);
+        parent = $('<div>').appendTo(t);
+        CreateAccordion(t);
+
+        $.getJSON(json, {format: 'raw'}, (data => PopulateAnalysisTree(parent, data)));
     });
 }
 
-function PopulateAnalysisTree(tree, parent, data) {
+function CreateAccordion(element, active=false) {
+    element.accordion({
+        active: active,
+        collapsible: true,
+        heightStyle: 'content',
+    });
+}
+
+function PopulateAnalysisTree(parent, data) {
     let levelmap = new Map();
 
     data.forEach((conclusion) => {
@@ -31,42 +38,43 @@ function PopulateAnalysisTree(tree, parent, data) {
     ['critical', 'error', 'warning', 'info'].forEach((level) => {
         if (!levelmap.has(level))
             return;
-        let ul = $('<ul>').appendTo(parent);
-        let li = $('<li>').appendTo(ul);
         let entries = levelmap.get(level);
-        let a = $('<a>').text(level + ' (' + entries.length + ')').appendTo(li);
-        PopulateConclusions(li, entries);
-    });
-
-    tree.jstree({
-        'core': {
-            'themes': {
-                'icons': false,
-            },
-        },
+        let leveltree = $('<div>').appendTo(parent);
+        $('<h3>').text(level + ' (' + entries.length + ')').appendTo(leveltree);
+        PopulateConclusions($('<div>').appendTo(leveltree), entries);
+        CreateAccordion(leveltree);
     });
 }
 
 function PopulateConclusions(parent, conclusions) {
-    let parentul = $('<ul>').appendTo(parent);
-
     conclusions.forEach((conclusion) => {
-        let li = $('<li>').text(conclusion.summary).appendTo(parentul);
-        let ul = $('<ul>').appendTo(li);
+        PopulateConclusion(parent, conclusion);
+    });
+    CreateAccordion(parent);
+}
 
-        li = $('<li>').text(conclusion.description).appendTo(ul);
-        ul = $('<ul>').appendTo(li);
+function PopulateConclusion(parent, conclusion) {
+    $('<h3>').text(conclusion.summary).appendTo(parent);
+    PopulateConclusionDetail($('<div>').appendTo(parent), conclusion);
+}
 
-        conclusion.details.forEach((detail) => {
-            $('<li>').append(DetailAnchors(detail)).appendTo(ul);
-        });
+function PopulateConclusionDetail(parent, conclusion) {
+    if (conclusion.description) {
+        let div = $('<div>').addClass('ConclusionDescription').appendTo(parent);
+        $('<a>').text(conclusion.description).appendTo(div);
+    }
+
+    conclusion.details.forEach((detail, index) => {
+        DetailAnchors(detail, index + 1).appendTo(parent);
     });
 }
 
-function DetailAnchors(detail) {
+function DetailAnchors(detail, index) {
     let div = $('<div>');
     const pattern = /([^{}]*)(?:\{(\w+)\})?/g;
     let matches = detail.description.matchAll(pattern);
+
+    $('<a>').text(index + ': ').addClass('ConclusionDetailIndex').appendTo(div);
 
     for (const match of matches) {
         if (match[1])

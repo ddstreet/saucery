@@ -1,4 +1,24 @@
 
+.AnalysisTree {
+    font-size: 1em;
+    line-height: 1.1;
+}
+
+.ConclusionDescription {
+    font-weight: bold;
+    text-align: center;
+}
+
+.ConclusionDetailIndex {
+    font-weight: bold;
+}
+
+.ui-accordion .ui-accordion-content {
+    padding-top: 0em;
+    padding-bottom: 0em;
+    padding-right: 0em;
+}
+
 a.critical {
     color: darkred;
 }
