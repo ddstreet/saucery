@@ -7,7 +7,6 @@ import subprocess
 
 from datetime import datetime
 from functools import cached_property
-from itertools import chain
 from pathlib import Path
 
 from ..base import SauceryBase
