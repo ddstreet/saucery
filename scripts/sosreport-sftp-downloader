@@ -263,8 +263,9 @@ class SaucerySFTPDownloader(object):
         stat = self._path_stat(path)
         age = datetime.now() - datetime.fromtimestamp(stat.st_mtime)
         if age > self.max_age:
-            LOGGER.debug(f"Skipping sosreport with age '{age}': '{path.name}'")
+            LOGGER.info(f"Ignoring sosreport with age '{age}': '{path.name}'")
             return False
+        LOGGER.info(f"Including sosreport with age '{age}': '{path.name}'")
         return True
 
     def _download(self, path, index, total_downloads, count, total_bytes):
