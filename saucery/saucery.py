@@ -56,10 +56,10 @@ class Saucery(SauceryBase):
     @cached_property
     def _sosreports(self):
         self._sosdir_mtime = self.sosdir.stat().st_mtime
-        return sorted([self.sosreport(s)
-                       for s in self.sosdir.iterdir()
-                       if s.is_file() and SOS.valid_filename(s.name)],
-                      key=lambda s: s.name)
+        paths = sorted((s for s in self.sosdir.iterdir()
+                        if s.is_file() and SOS.valid_filename(s.name)),
+                       key=lambda s: s.stat().st_mtime)
+        return list(map(self.sosreport, paths))
 
     @property
     def sosreports(self):
