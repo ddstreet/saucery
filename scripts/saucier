@@ -46,7 +46,7 @@ def main():
     opts = parser.parse_args()
     saucier = parser.saucery(opts).saucier
 
-    sosreports = opts.sosreport or saucier.sosreports
+    sosreports = saucier.sosreports(opts.sosreport)
 
     if opts.threads == 0:
         parallel = True

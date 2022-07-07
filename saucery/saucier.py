@@ -16,10 +16,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Saucier(SauceryBase):
-    @property
-    def sosreports(self):
-        return self.saucery.sosreports
-
     def sosreport(self, name):
         if isinstance(name, str) and not SOS.valid_filename(name):
             # See if we match an existing sosreport name (without the suffix)
@@ -29,12 +25,15 @@ class Saucier(SauceryBase):
                     return s
         return self.saucery.sosreport(name)
 
-    def _sosreports(self, sosreports):
-        for s in sosreports or self.sosreports:
+    def _sosreports(self, sosreports=None):
+        for s in sosreports or self.saucery.sosreports:
             try:
                 yield self.sosreport(s)
             except ValueError as e:
                 LOGGER.info(e)
+
+    def sosreports(self, sosreports=None):
+        return list(self._sosreports(sosreports))
 
     def print_sosreports(self, sosreports):
         for sos in self._sosreports(sosreports):
@@ -57,7 +56,7 @@ class Saucier(SauceryBase):
                 LOGGER.info(f'Not analysed: {sos}')
 
     def _parallel(self, sosreports, action, parallel=True):
-        sosreports = list(self._sosreports(sosreports))
+        sosreports = self.sosreports(sosreports)
 
         if not parallel:
             for s in sosreports:
@@ -118,7 +117,7 @@ class Saucier(SauceryBase):
         self.process(sosreports, mount=True, force=remount, parallel=parallel)
 
     def unmount(self, sosreports):
-        for s in map(self.sosreport, sosreports):
+        for s in self._sosreports(sosreports):
             s.unmount()
 
     def analyse(self, sosreports, *, parallel=False, reanalyse=False):
