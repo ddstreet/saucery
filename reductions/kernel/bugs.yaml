@@ -1,0 +1,10 @@
+- name: dmesg_kernel_bugs
+  type: regex
+  source: dmesg
+  pattern: '^.+ BUG: .+$'
+- name: kernel_bugs
+  level: error
+  summary: Kernel BUG messages
+  description: Kernel bug messages detected, this indicates serious problems
+  type: analysis
+  source: dmesg_kernel_bugs
