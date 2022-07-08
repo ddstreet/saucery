@@ -38,9 +38,11 @@ def main():
     parser.add_argument('-U', '--menu', action='store_true',
                         help='Update the menu with current sosreports')
     parser.add_argument('--umount', action='store_true', dest='unmount', help=argparse.SUPPRESS)
+    parser.add_argument('--remove-invalid', action='store_true',
+                        help='Remove invalid sosreports.')
     parser.action_attrs.extend(['show_analysis',
                                 'extract', 'squash', 'analyse', 'menu',
-                                'mount', 'unmount'])
+                                'mount', 'unmount', 'remove_invalid'])
 
     parser.add_argument('sosreport', nargs='*', default=[],
                         help='Act on specific sosreports (implies --force)')
@@ -70,7 +72,8 @@ def main():
                             squash=opts.squash,
                             mount=opts.mount,
                             analyse=opts.analyse,
-                            update_menu=opts.menu)
+                            update_menu=opts.menu,
+                            remove_invalid=opts.remove_invalid)
             if opts.show_analysis:
                 saucier.print_analysis(sosreports)
         finally:

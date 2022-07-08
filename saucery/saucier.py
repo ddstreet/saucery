@@ -99,12 +99,16 @@ class Saucier(SauceryBase):
 
     def process(self, sosreports, *,
                 extract=False, squash=False, mount=False, analyse=False,
-                update_menu=False, force=False, parallel=True):
-        self._parallel(sosreports,
-                       partial(self._process,
-                               extract=extract, squash=squash, mount=mount, analyse=analyse,
-                               force=force),
-                       parallel=parallel)
+                update_menu=False, remove_invalid=False, force=False, parallel=True):
+        if remove_invalid:
+            self.remove_invalid(sosreports)
+
+        if any((extract, squash, mount, analyse)):
+            self._parallel(sosreports,
+                           partial(self._process,
+                                   extract=extract, squash=squash, mount=mount, analyse=analyse,
+                                   force=force),
+                           parallel=parallel)
 
         if update_menu:
             self.update_menu()
@@ -127,3 +131,7 @@ class Saucier(SauceryBase):
 
     def update_menu(self):
         return self.saucery.update_menu()
+
+    def remove_invalid(self, sosreports):
+        for s in self._sosreports(sosreports):
+            s.remove_invalid()

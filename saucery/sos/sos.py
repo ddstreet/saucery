@@ -210,6 +210,19 @@ class SOS(SauceryBase):
     files_json = FileProperty('files.json', 'json')
     total_size = FileProperty('total_size', int)
 
+    def remove_invalid(self):
+        if not self.invalid:
+            LOGGER.debug(f'Not removing valid sosreport: {self.name}')
+            return
+
+        LOGGER.info(f'Removing invalid sosreport: {self.name}')
+
+        if self.dry_run:
+            return
+
+        shutil.rmtree(self.workdir)
+        self.sosreport.unlink()
+
     def extract(self, *args, **kwargs):
         self._extract(*args, **kwargs)
         return self.extracted
