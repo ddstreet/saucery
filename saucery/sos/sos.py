@@ -56,6 +56,15 @@ class SOS(SauceryBase):
     def sosreport(self):
         return Path(self._sosreport).resolve()
 
+    @property
+    def state(self):
+        return [s for s in ['new', 'invalid', 'extracted', 'squashed', 'mounted', 'analysed']
+                if getattr(self, s, False)]
+
+    @property
+    def new(self):
+        return not any((self.invalid, self.extracted, self.squashed))
+
     def exists(self):
         return self.sosreport.is_file()
 

@@ -20,6 +20,8 @@ def main():
     parser.add_argument('--threads',
                         default=0, type=int,
                         help='Run actions in this many threads (0: #cpus, default: 0)')
+    parser.add_argument('-s', '--state', action='append',
+                        help='Act on only sosreports in (any of) these state(s).')
 
     parser.add_argument('-a', '--show-analysis', action='store_true',
                         help='Show the analysis results')
@@ -46,7 +48,11 @@ def main():
     opts = parser.parse_args()
     saucier = parser.saucery(opts).saucier
 
-    sosreports = saucier.sosreports(opts.sosreport)
+    sosreports = saucier.sosreports(opts.sosreport, opts.state)
+
+    if not sosreports:
+        print('No sosreports found.', file=sys.stderr)
+        return
 
     if opts.threads == 0:
         parallel = True
