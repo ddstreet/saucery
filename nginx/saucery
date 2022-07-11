@@ -43,7 +43,7 @@ server {
 
       if ($arg_format != 'raw') {
         rewrite ^/sos/sosreport-[^/]+/files/.+(?<!/)$ /web/file.html last;
-        rewrite ^/sos/sosreport-[^/]+/external_analysis/.+\.json$ /web/json.html last;
+        rewrite ^/sos/sosreport-[^/]+/analysis_files/.+\.json$ /web/json.html last;
       }
 
       location ~ (?<=/)$ {
