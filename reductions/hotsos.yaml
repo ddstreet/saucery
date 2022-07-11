@@ -7,8 +7,8 @@
   type: yaml2json
 - name: hotsos
   type: analysis
-  summary: HotSOS YAML output
-  source: hotsos.yaml
+  summary: HotSOS output
+  source: hotsos.json
 - name: hotsos-potential-issues
   source: hotsos.json
   type: jq
