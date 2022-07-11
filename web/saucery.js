@@ -128,10 +128,14 @@ function SauceryTable(entries,
         });
     });
 
-    table.DataTable({
-        'pageLength': 25,
-        'order': [[ 4, 'desc' ], [ 2, 'desc' ]],
+    // Defer table generation, as 'table' needs to already be in the DOM
+    $(function () {
+        table.DataTable({
+            'pageLength': 25,
+            'order': [[ 4, 'desc' ], [ 2, 'desc' ]],
+        });
     });
+
     return table;
 }
 
