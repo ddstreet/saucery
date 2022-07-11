@@ -1,5 +1,7 @@
 
+import json
 import subprocess
+import yaml
 
 from abc import abstractmethod
 from functools import cached_property
@@ -172,6 +174,44 @@ class JqReference(ExecReference):
     @property
     def exec_cmd(self):
         return super().exec_cmd + [self.get('jq')]
+
+
+class Yaml2JsonReference(TransformReference):
+    '''Yaml2JsonReference class.
+
+    This transforms YAML into JSON.
+    '''
+    @classmethod
+    def TYPE(cls):
+        return 'yaml2json'
+
+    @classmethod
+    def _add_fields(cls):
+        return {
+            'indent': int,
+        }
+
+    @classmethod
+    def _field_defaults(cls):
+        return {
+            'indent': 2,
+        }
+
+    def transform(self, value):
+        return json.dumps(yaml.safe_load(value), indent=self.get('indent'))
+
+
+class Json2YamlReference(TransformReference):
+    '''Json2YamlReference class.
+
+    This transforms JSON into YAML.
+    '''
+    @classmethod
+    def TYPE(cls):
+        return 'json2yaml'
+
+    def transform(self, value):
+        return yaml.dump(json.loads(value))
 
 
 class DictReference(ParseReference):

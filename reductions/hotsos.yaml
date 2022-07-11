@@ -1,7 +1,10 @@
-- name: hotsos.json
+- name: hotsos.yaml
   exec: hotsos
   params: '{filesdir}'
   type: exec
+- name: hotsos.json
+  source: hotsos.yaml
+  type: yaml2json
 - name: hotsos-potential-issues
   source: hotsos.json
   type: jq
