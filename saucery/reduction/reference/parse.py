@@ -130,9 +130,10 @@ class ExecReference(TransformReference):
 
     @cached_property
     def exec_cmd(self):
-        cmd = which(self.get('exec'))
+        cmdname = self.get('exec')
+        cmd = which(cmdname)
         if not cmd:
-            self._raise("Could not find '{self.get('exec')}' command")
+            self._raise(f"Could not find '{cmdname}' command")
         return [cmd] + self.sos.mapping.format(self.get('params'))
 
     def transform(self, value):
