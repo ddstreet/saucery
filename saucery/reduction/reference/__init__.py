@@ -6,6 +6,7 @@ from .file import * # noqa
 from .dict import * # noqa
 from .parse import * # noqa
 from .regex import * # noqa
+from .split import * # noqa
 
 from .reference import InvalidReferenceError
 from .reference import Reference
