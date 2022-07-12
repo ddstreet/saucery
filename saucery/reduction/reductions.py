@@ -67,9 +67,9 @@ class Reductions(UserDict):
         raise KeyError(key)
 
     def _load(self, location):
-        for f in location.rglob('*.[jJ][sS][oO][nN]'):
+        for f in location.rglob('[!.]*.[jJ][sS][oO][nN]'):
             self._load_json(f)
-        for f in location.rglob('*.[yY][aA][mM][lL]'):
+        for f in location.rglob('[!.]*.[yY][aA][mM][lL]'):
             self._load_yaml(f)
 
     def _load_json(self, path):
