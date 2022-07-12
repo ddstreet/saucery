@@ -1,0 +1,13 @@
+- name: list_units_failed
+  type: command
+  command: systemd
+  source: systemctl_list-units_--failed
+- name: units_failed
+  type: regex
+  source: list_units_failed
+  pattern: '^\* .+$'
+- name: units_failed_analysis
+  summary: Failed systemd units
+  level: warning
+  type: analysis
+  source: units_failed
