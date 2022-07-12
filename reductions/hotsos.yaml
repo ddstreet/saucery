@@ -11,12 +11,18 @@
   source: hotsos.json
 - name: hotsos-potential-issues
   source: hotsos.json
-  type: jq
-  jq: '[.[]."potential-issues"|select(.)|.[]]|flatten'
+  type: chain
+  chain:
+  - type: jq
+    jq: '[.[]."potential-issues"|select(.)|.[]]|flatten|.[]'
+  - type: splitlines
 - name: hotsos-bugs-detected
   source: hotsos.json
-  type: jq
-  jq: '[.[]."bugs-detected"|select(.)|.[].desc]|flatten'
+  type: chain
+  chain:
+  - type: jq
+    jq: '[.[]."bugs-detected"|select(.)|.[].desc]|flatten|.[]'
+  - type: splitlines
 - description: HotSOS detected these potential issues
   level: warning
   name: hotsos-issue-analysis
