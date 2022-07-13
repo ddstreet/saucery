@@ -1,0 +1,27 @@
+- name: oom_killer
+  source: journal
+  type: regex
+  pattern: '^.+ invoked oom-killer: .+$'
+- name: out_of_memory
+  source: journal
+  type: regex
+  pattern: '^.+ Out of memory: Kill process .+$'
+- name: oom_reaper
+  source: journal
+  type: regex
+  pattern: '^.+ oom_reaper: reaped process .+$'
+- name: oom_killer_analysis
+  source: oom_killer
+  type: analysis
+  level: warning
+  summary: OOM killer
+- name: oom_reaper_analysis
+  source: oom_reaper
+  type: analysis
+  level: warning
+  summary: OOM reaper
+- name: out_of_memory_analysis
+  source: out_of_memory
+  type: analysis
+  level: warning
+  summary: Out of memory
