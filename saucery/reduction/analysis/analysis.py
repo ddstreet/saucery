@@ -3,7 +3,9 @@ from functools import cached_property
 
 from ..definition import InvalidDefinitionError
 from ..reference import ReferenceSourceDefinition
+from ..reference.parse import DictReference
 
+from .path import ReferencePathDictResult
 from .path import ReferencePathListResult
 
 
@@ -18,10 +20,6 @@ class Analysis(ReferenceSourceDefinition):
     '''
     ERROR_CLASS = InvalidAnalysisError
     VALID_LEVELS = ('critical', 'error', 'warning', 'info', 'debug')
-
-    @classmethod
-    def TYPE(cls):
-        return 'analysis'
 
     @classmethod
     def _add_fields(cls):
@@ -73,3 +71,41 @@ class Analysis(ReferenceSourceDefinition):
             'unknown': self.results.unknown,
             'details': self.results.details,
         }
+
+
+class BasicAnalysis(Analysis):
+    @classmethod
+    def TYPE(cls):
+        return 'analysis'
+
+
+class DictAnalysis(Analysis):
+    @classmethod
+    def TYPE(cls):
+        return 'dictanalysis'
+
+    @classmethod
+    def _add_fields(cls):
+        return {
+            'keys': [list, str],
+            'except_keys': [list, str],
+        }
+
+    @classmethod
+    def _field_defaults(cls):
+        return {
+            'keys': [],
+            'except_keys': [],
+        }
+
+    @property
+    def source_class(self):
+        return DictReference
+
+    @property
+    def results(self):
+        '''The results of our analysis.
+
+        Returns a new ReferencePathDictResult object from our source pathdict.
+        '''
+        return ReferencePathDictResult(self.source_pathdict)

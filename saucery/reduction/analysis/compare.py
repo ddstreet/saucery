@@ -33,7 +33,7 @@ class ComparisonAnalysis(Analysis):
 
     @property
     def comparison_a(self):
-        return self.source.value
+        return self.source_value
 
     @property
     def comparison_b(self):

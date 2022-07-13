@@ -1,4 +1,5 @@
 
+from abc import abstractmethod
 from functools import cached_property
 
 
@@ -7,7 +8,7 @@ class ReferencePathListResult(object):
         self._pathlist = pathlist
         self._value = pathlist.value if pathlist else None
 
-    def result_detail(self, path):
+    def path_detail(self, path):
         return {
             'description': '{0}',
             '0': {
@@ -20,13 +21,31 @@ class ReferencePathListResult(object):
             },
         }
 
+    def path_filter(self, path):
+        '''If this ReferencePath should be included in the result details.
+
+        By default, this returns True if the path value is not None; otherwise False.
+        '''
+        return path.value is not None
+
     @cached_property
     def details(self):
         '''The result details.
 
         Returns a list of ResultDetail objects.
         '''
-        return [self.result_detail(p) for p in self._pathlist or [] if p.value is not None]
+        return list(map(self.path_detail, filter(self.path_filter, self._pathlist or [])))
+
+    @property
+    def _expected(self):
+        '''If the result detail(s) are as expected.
+
+        This controls the 'normal' and 'abnormal' states.
+
+        By default, if we have no result details, this returns True; otherwise False.
+        Subclasses may override this if needed.
+        '''
+        return not bool(self.details)
 
     @property
     def normal(self):
@@ -34,12 +53,12 @@ class ReferencePathListResult(object):
 
         Returns True if the results are 'normal'.
 
-        The default implementation here returns True if abnormal and unknown are False,
-        and False otherwise.
+        This returns True if self.unknown is False and self._expected is True;
+        otherwise False. Subclasses should normally not need to override this.
 
         Note that when this is True, neither abnormal nor unknown are True.
         '''
-        return not self.unknown and not self.abnormal
+        return not self.unknown and bool(self._expected)
 
     @property
     def abnormal(self):
@@ -47,12 +66,12 @@ class ReferencePathListResult(object):
 
         Returns True if the results are 'not normal', indicating they should be examined.
 
-        The default implementation here returns True if our value is not None/empty,
-        and False otherwise.
+        This returns True if self.unknown is False and self._expected is False;
+        otherwise False. Subclasses should normally not need to override this.
 
         Note that when this is True, neither normal nor unknown are True.
         '''
-        return bool(self._value)
+        return not self.unknown and not bool(self._expected)
 
     @property
     def unknown(self):
@@ -60,9 +79,24 @@ class ReferencePathListResult(object):
 
         Returns True if the analysis could not be performed.
 
-        The default implementation here returns True if our value is None,
-        and False otherwise.
+        By default, if our pathlist value is None, this returns True; otherwise False.
+        Subclasses may override this if needed.
 
         Note that when this is True, neither normal nor abnormal are True.
         '''
         return self._value is None
+
+
+class ReferencePathDictResult(ReferencePathListResult):
+    def __init__(self, pathdict):
+        super().__init__(pathdict.pathlist if pathdict else None)
+        self._pathdict = pathdict
+
+
+class ComparisonPathListResult(ReferencePathListResult):
+    def path_filter(self, path):
+        return super().path_filter(path) and self.path_compare(path)
+
+    @abstractmethod
+    def path_compare(self, path):
+        pass
