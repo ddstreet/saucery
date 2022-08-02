@@ -315,6 +315,9 @@ class SaucerySFTPDownloader(object):
         except subprocess.SubprocessError as e:
             LOGGER.error(f"Failed to get {name} for '{path}': {e}")
             return
+        except FileNotFoundError:
+            LOGGER.error(f"Missing program to get {name}, skipping: '{cmd[0]}'")
+            return
         if result.returncode != 0:
             LOGGER.error(f"Failed to get {name} for '{path}'")
             if result.stderr.strip():
