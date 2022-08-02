@@ -246,7 +246,7 @@ class SaucerySFTPDownloader(object):
                 continue
 
             if remaining:
-                LOGGER.info(f'Checking path {newpath}')
+                LOGGER.debug(f'Checking path {newpath}')
                 yield from self._find_downloads(remaining, newpath)
                 continue
 
