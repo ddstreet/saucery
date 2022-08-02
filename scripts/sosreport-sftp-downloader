@@ -160,6 +160,10 @@ class SaucerySFTPDownloader(object):
         get_case = config.get('get_case')
         get_customer = config.get('get_customer')
 
+        dump_parser = argparse.ArgumentParser(add_help=False)
+        dump_parser.add_argument('--dump-config', action='store_true')
+        dump_config = dump_parser.parse_known_args()[0].dump_config
+
         epilog = ('The --regex parameter will ignore default (configfile) regex; '
                   'use the --add-regex parameter to add additional patterns.')
         parser = argparse.ArgumentParser(epilog=epilog)
@@ -175,9 +179,6 @@ class SaucerySFTPDownloader(object):
                             help=('Dump the configfile content, including any provided '
                                   'parameter settings, then exit without downloading. '
                                   'The output can be manually saved to the configfile.'))
-
-        dump_config = parser.parse_known_args()[0].dump_config
-
         parser.add_argument('--get-case', default=get_case,
                             help=('Program to run to get the case number. '
                                   'The single parameter is the remote sosreport path.%s' %
