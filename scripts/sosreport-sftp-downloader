@@ -299,6 +299,8 @@ class SaucerySFTPDownloader(object):
                 (bar.adjbytes, bar.adjbytessuffix) = self.scale_bytes(count + n)
             with sos.sosreport.open('wb') as dest:
                 self.sftp.getfo(str(path), dest, callback=lambda n, _: callback(n, last))
+            if hasattr(bar, 'is_tty') and not bar.is_tty():
+                LOGGER.debug(f"Downloaded '{path}' to '{sos}'")
         self._get_case(sos, path)
         self._get_customer(sos, path)
 
