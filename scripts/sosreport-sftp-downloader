@@ -8,6 +8,7 @@ import paramiko
 import re
 import subprocess
 import sys
+import tempfile
 
 from datetime import datetime
 from datetime import timezone
@@ -297,8 +298,11 @@ class SaucerySFTPDownloader(object):
                 l[0] = n
                 (bar.adjindex, bar.adjindexsuffix) = self.scale_bytes(n)
                 (bar.adjbytes, bar.adjbytessuffix) = self.scale_bytes(count + n)
-            with sos.sosreport.open('wb') as dest:
-                self.sftp.getfo(str(path), dest, callback=lambda n, _: callback(n, last))
+            with tempfile.TemporaryDirectory(dir=self.saucery.sosdir) as destdir:
+                destpath = Path(destdir) / f'{sos.name}.PARTIAL'
+                with destpath.open('wb') as dest:
+                    self.sftp.getfo(str(path), dest, callback=lambda n, _: callback(n, last))
+                destpath.rename(sos.sosreport)
             if hasattr(bar, 'is_tty') and not bar.is_tty():
                 LOGGER.debug(f"Downloaded '{path}' to '{sos}'")
         self._get_case(sos, path)
