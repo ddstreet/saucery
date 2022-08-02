@@ -50,6 +50,11 @@ class SaucerySFTPDownloader(object):
 
         self.saucery = Saucery()
 
+        LOGGER.info(f"Checking remote server for new sosreports: '{self.server}'")
+
+        if not LOGGER.isEnabledFor(logging.DEBUG):
+            LOGGER.info('(This may take a while; use --verbose for more progress details)')
+
         downloads = []
         for pattern in self.regex:
             LOGGER.debug(f"Checking pattern '{pattern}'")
