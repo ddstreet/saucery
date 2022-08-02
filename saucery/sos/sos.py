@@ -233,7 +233,10 @@ class SOS(SauceryBase):
             return
 
         if self.squashed and not reextract:
-            LOGGER.info(f'Already squashed, not extracting (try mounting instead): {self.name}')
+            if self.mounted:
+                LOGGER.debug(f'Already squashed, not extracting: {self.name}')
+            else:
+                LOGGER.debug(f'Already squashed, not extracting (try mounting): {self.name}')
             return
 
         if self.filesdir.exists():
@@ -247,7 +250,7 @@ class SOS(SauceryBase):
                     if not self.dry_run:
                         shutil.rmtree(self.filesdir)
             else:
-                LOGGER.info(f'Already extracted, not re-extracting: {self.filesdir}')
+                LOGGER.debug(f'Already extracted, not re-extracting: {self.filesdir}')
                 return
 
         LOGGER.info(f'Extracting {self.sosreport.name} to {self.filesdir}')
@@ -287,7 +290,7 @@ class SOS(SauceryBase):
 
     def _squash(self, resquash=False):
         if self.squashed and not resquash:
-            LOGGER.info(f'Already squashed, not re-squashing: {self.name}')
+            LOGGER.debug(f'Already squashed, not re-squashing: {self.name}')
             return
 
         if not self.filesdir.exists() or not self.extracted:
@@ -348,7 +351,7 @@ class SOS(SauceryBase):
                 if self.extracted:
                     LOGGER.info(f'Not mounting over extracted files: {self.filesdir}')
                 elif self.mounted:
-                    LOGGER.info(f'Already mounted, not re-mounting: {self.filesdir}')
+                    LOGGER.debug(f'Already mounted, not re-mounting: {self.filesdir}')
                 return
 
         LOGGER.info(f'Mounting {self.squashimg} at {self.filesdir}')
@@ -413,7 +416,7 @@ class SOS(SauceryBase):
             if reanalyse:
                 LOGGER.info(f'Ignoring existing analysis for {self.name}')
             else:
-                LOGGER.info(f'Already analysed, not re-analysing {self.name}')
+                LOGGER.debug(f'Already analysed, not re-analysing {self.name}')
                 return
 
         LOGGER.info(f'Analysing {self.name}')
