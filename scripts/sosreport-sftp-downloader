@@ -251,7 +251,7 @@ class SaucerySFTPDownloader(object):
                 yield from self._find_downloads(remaining, newpath)
                 continue
 
-            LOGGER.info(f'Found sosreport: {newpath}')
+            LOGGER.debug(f'Found sosreport: {newpath}')
             yield newpath
 
     @lru_cache(1000)
